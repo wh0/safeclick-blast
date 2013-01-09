@@ -1,0 +1,157 @@
+<!doctype html>
+<style>
+/* do not add or remove rules unless you change the indices in init() */
+html{background:black;font-family:sans-serif;color:white;}
+#likelike{position:absolute;top:52px;left:472px;}
+#scoreLine{font-size:smaller;color:#a0a0a0;}
+#scoreDisplay{font-weight:bold;}
+.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url(http://i.imgur.com/OcA4a.png);}
+.dead{position:absolute;margin:-22px -20px;width:40px;height:44px;background-image:url(http://i.imgur.com/vvTQy.png);transition-property:opacity;}
+.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-image:url(http://i.imgur.com/cELTk.png);transition-property:left,top,opacity;}
+.number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;transition-property:top,left,opacity;}
+</style>
+<script>
+var
+ASTEROID_SPAWN_DELAY = 500, // time between asteroid click and next spawn
+ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
+// area where asteroids can normally spawn, in pixels
+SPAWN_TOP = 150,
+SPAWN_BOTTOM = 480 - 30,
+SPAWN_LEFT = 30,
+SPAWN_RIGHT = 640 - 30,
+SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
+SCORE_DX = 8, // movement of +x score text
+SCORE_DY = 0,
+MINERAL_DX = 0, // normal displacement of mineral
+MINERAL_DY = -64,
+MINERAL_ATTACK_DX = 0, // displacement of mineral on attack
+MINERAL_ATTACK_DY = -32,
+MINERAL_MOVE_TIME = 100, // time taken to displace mineral, in ms
+MINERAL_HOLD_TIME = 100, // time between arriving at final destination and fading start, in ms
+MINERAL_FADE_TIME = 200, // time to fade mineral, in ms
+FAST_THRESHOLD = 300, // click mineral at most this long after clicking the asteroid to be considered "fast," in ms
+FAST_BEFORE_ATTACK = 3; // launch attack after this many fast mineral clicks
+var score = 0;
+var scoreDisplay = null;
+var numFast = 0;
+function init() {
+    document.styleSheets[0].cssRules[5].style.transitionDuration = ASTEROID_EXPLODE_TIME + 'ms';
+    document.styleSheets[0].cssRules[6].style.transitionDuration = MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms';
+    document.styleSheets[0].cssRules[7].style.transitionDuration = SCORE_SHOW_TIME + 'ms';
+    scoreDisplay = document.getElementById('scoreDisplay');
+    step();
+}
+function registerTime(t) {
+    document.title = t; // %%%
+    if (t != -1 && t < FAST_THRESHOLD) {
+        numFast++;
+    } else {
+        numFast = 0;
+    }
+}
+function step() {
+    if (numFast < FAST_BEFORE_ATTACK) {
+        setTimeout(spawnRandom, ASTEROID_SPAWN_DELAY);
+    } else {
+        setTimeout(spawnAttack, ASTEROID_SPAWN_DELAY);
+    }
+}
+function spawnRandom() {
+    var x = Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT);
+    var y = Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP);
+    asteroid(x, y);
+}
+function spawnAttack() {
+    fakeAsteroid(500 - MINERAL_DX, 62 - MINERAL_DY);
+}
+function fakeAsteroid(x, y) {
+    var div = document.createElement('div');
+    div.className = 'asteroid';
+    div.style.top = y + 'px';
+    div.style.left = x + 'px';
+    div.addEventListener('click', function (e) {
+        if (div.className == 'dead') return;
+        div.className = 'dead';
+        div.style.opacity = '0';
+        setTimeout(function () {
+            document.body.removeChild(div);
+        }, ASTEROID_EXPLODE_TIME);
+        mineral(x, y, MINERAL_ATTACK_DX,  MINERAL_ATTACK_DY);
+        number(x, y, '+1');
+        addScore(1);
+        // game ends here, so we don't call step()
+    });
+    document.body.appendChild(div);
+}
+function asteroid(x, y) {
+    var div = document.createElement('div');
+    div.className = 'asteroid';
+    div.style.top = y + 'px';
+    div.style.left = x + 'px';
+    div.addEventListener('click', function (e) {
+        if (div.className == 'dead') return;
+        div.className = 'dead';
+        div.style.opacity = '0';
+        setTimeout(function () {
+            document.body.removeChild(div);
+        }, ASTEROID_EXPLODE_TIME);
+        mineral(x, y, MINERAL_DX,  MINERAL_DY);
+        number(x, y, '+1');
+        addScore(1);
+        step();
+    });
+    document.body.appendChild(div);
+}
+function mineral(x, y, dx, dy) {
+    var startTime = Date.now();
+    var div = document.createElement('div');
+    div.className = 'mineral';
+    div.style.top = y + 'px';
+    div.style.left = x + 'px';
+    var tFade = setTimeout(function () {
+        div.style.opacity = '0';
+    }, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
+    var tRemove = setTimeout(function () {
+        document.body.removeChild(div);
+        registerTime(-1);
+    }, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
+    div.addEventListener('click', function (e) {
+        var endTime = Date.now();
+        registerTime(endTime - startTime);
+        clearTimeout(tFade);
+        clearTimeout(tRemove);
+        document.body.removeChild(div);
+        number(x + dx, y + dy, '+3');
+        addScore(3);
+    });
+    document.body.appendChild(div);
+    var dummy = div.clientHeight; // flush initialization
+    div.style.top = y + dy + 'px';
+    div.style.left = x + dx + 'px';
+}
+function number(x, y, text) {
+    var div = document.createElement('div');
+    div.className = 'number';
+    div.style.top = y + 'px';
+    div.style.left = x + 'px';
+    div.textContent = text;
+    setTimeout(function () {
+        document.body.removeChild(div);
+    }, SCORE_SHOW_TIME);
+    document.body.appendChild(div);
+    var dummy = div.clientHeight; // flush initialization
+    div.style.left = x + SCORE_DX + 'px';
+    div.style.top = y + SCORE_DY + 'px';
+    div.style.opacity = '0';
+}
+function addScore(delta) {
+    score += delta;
+    scoreDisplay.textContent = score;
+}
+</script>
+<body>
+<p>This is an example of a game built in HTML and JavaScript.</p>
+<p>Blast the asteroids and grab the minerals before they disintegrate.</p>
+<p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
+<iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=dark&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+<script>init();</script>
