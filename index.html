@@ -14,14 +14,16 @@ html{background:black;font-family:sans-serif;color:white;}
 var
 ASTEROID_SPAWN_DELAY = 500, // time between asteroid click and next spawn
 ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
-// area where asteroids can normally spawn, in pixels
-SPAWN_TOP = 150,
+
+SPAWN_TOP = 150, // area where asteroids can normally spawn, in pixels
 SPAWN_BOTTOM = 480 - 30,
 SPAWN_LEFT = 30,
 SPAWN_RIGHT = 640 - 30,
+
 SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
 SCORE_DX = 8, // movement of +x score text
 SCORE_DY = 0,
+
 MINERAL_DX = 0, // normal displacement of mineral
 MINERAL_DY = -64,
 MINERAL_ATTACK_DX = 0, // displacement of mineral on attack
@@ -29,11 +31,14 @@ MINERAL_ATTACK_DY = -32,
 MINERAL_MOVE_TIME = 100, // time taken to displace mineral, in ms
 MINERAL_HOLD_TIME = 100, // time between arriving at final destination and fading start, in ms
 MINERAL_FADE_TIME = 200, // time to fade mineral, in ms
+
 FAST_THRESHOLD = 300, // click mineral at most this long after clicking the asteroid to be considered "fast," in ms
 FAST_BEFORE_ATTACK = 3; // launch attack after this many fast mineral clicks
+
 var score = 0;
 var scoreDisplay = null;
 var numFast = 0;
+
 function init() {
     document.styleSheets[0].cssRules[5].style.transitionDuration = ASTEROID_EXPLODE_TIME + 'ms';
     document.styleSheets[0].cssRules[6].style.transitionDuration = MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms';
@@ -41,6 +46,7 @@ function init() {
     scoreDisplay = document.getElementById('scoreDisplay');
     step();
 }
+
 function registerTime(t) {
     document.title = t; // %%%
     if (t != -1 && t < FAST_THRESHOLD) {
@@ -49,6 +55,7 @@ function registerTime(t) {
         numFast = 0;
     }
 }
+
 function step() {
     if (numFast < FAST_BEFORE_ATTACK) {
         setTimeout(spawnRandom, ASTEROID_SPAWN_DELAY);
@@ -56,14 +63,17 @@ function step() {
         setTimeout(spawnAttack, ASTEROID_SPAWN_DELAY);
     }
 }
+
 function spawnRandom() {
     var x = Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT);
     var y = Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP);
     asteroid(x, y);
 }
+
 function spawnAttack() {
     fakeAsteroid(500 - MINERAL_DX, 62 - MINERAL_DY);
 }
+
 function fakeAsteroid(x, y) {
     var div = document.createElement('div');
     div.className = 'asteroid';
@@ -83,6 +93,7 @@ function fakeAsteroid(x, y) {
     });
     document.body.appendChild(div);
 }
+
 function asteroid(x, y) {
     var div = document.createElement('div');
     div.className = 'asteroid';
@@ -102,6 +113,7 @@ function asteroid(x, y) {
     });
     document.body.appendChild(div);
 }
+
 function mineral(x, y, dx, dy) {
     var startTime = Date.now();
     var div = document.createElement('div');
@@ -129,6 +141,7 @@ function mineral(x, y, dx, dy) {
     div.style.top = y + dy + 'px';
     div.style.left = x + dx + 'px';
 }
+
 function number(x, y, text) {
     var div = document.createElement('div');
     div.className = 'number';
@@ -144,6 +157,7 @@ function number(x, y, text) {
     div.style.top = y + SCORE_DY + 'px';
     div.style.opacity = '0';
 }
+
 function addScore(delta) {
     score += delta;
     scoreDisplay.textContent = score;
