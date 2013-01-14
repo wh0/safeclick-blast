@@ -1,15 +1,15 @@
 <!doctype html>
 <style>
-/* do not add or remove rules unless you change the indices in init() */
 html{background:black;font-family:sans-serif;color:white;}
 #likelike{position:absolute;top:52px;left:472px;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
 #scoreDisplay{font-weight:bold;}
-.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url(http://i.imgur.com/OcA4a.png);}
-.dead{position:absolute;margin:-22px -20px;width:40px;height:44px;background-image:url(http://i.imgur.com/vvTQy.png);transition-property:opacity;}
-.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url(http://i.imgur.com/cELTk.png);background-size:200%;transition-property:left,top,opacity;}
-.number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;transition-property:top,left,opacity;}
+.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");}
+.dead{position:absolute;margin:-22px -20px;width:40px;height:44px;background-image:url("http://i.imgur.com/vvTQy.png");}
+.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
+.number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
 </style>
+<style>/* this one is populated by javascript */</style>
 <script>
 var
 ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
@@ -30,9 +30,24 @@ var score = 0;
 var scoreDisplay = null;
 
 function init() {
-	document.styleSheets[0].cssRules[5].style.transitionDuration = ASTEROID_EXPLODE_TIME + 'ms';
-	document.styleSheets[0].cssRules[6].style.transitionDuration = MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms';
-	document.styleSheets[0].cssRules[7].style.transitionDuration = SCORE_SHOW_TIME + 'ms';
+	var ss = document.styleSheets[1];
+	var rule = 0;
+	if ('transition' in document.documentElement.style) {
+		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{transition-property:left,top,opacity;transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+	} else if ('webkitTransition' in document.documentElement.style) {
+		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;-webkit-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+	} else if ('mozTransition' in document.documentElement.style) {
+		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;-moz-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+	} else {
+		console.log('):');
+		return;
+	}
 	scoreDisplay = document.getElementById('scoreDisplay');
 	test();
 }
