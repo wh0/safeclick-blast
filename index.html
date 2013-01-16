@@ -1,7 +1,8 @@
 <!doctype html>
 <style>
 html{background:black;font-family:sans-serif;color:white;}
-#likelike{position:absolute;top:52px;left:472px;}
+#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
+#likelike{position:absolute;visibility:hidden;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
 #scoreDisplay{font-weight:bold;}
 .asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");}
@@ -14,48 +15,100 @@ html{background:black;font-family:sans-serif;color:white;}
 var
 ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
 
+SPAWN_TOP = 80, // area where objects can normally spawn, in pixels
+SPAWN_BOTTOM = 480 - 80,
+SPAWN_LEFT = 80,
+SPAWN_RIGHT = 640 - 80,
+
 SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
 SCORE_DX = 8, // movement of +x score text
 SCORE_DY = 0,
 
 OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
 
-MINERAL_DX = 200, // normal displacement of mineral
-MINERAL_DY = -200,
-MINERAL_MOVE_TIME = 200, // time taken to displace mineral, in ms
-MINERAL_HOLD_TIME = -100, // time between arriving at final destination and fading start, in ms
-MINERAL_FADE_TIME = 100; // time to fade mineral, in ms
+MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
+MINERAL_START_SPEED = 200 / 60 * 1000, // the first mineral takes this long to displace, in ms
+MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
+MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
+
+FAILURES_BEFORE_ATTACK = 3; // show target after this many consecutive minerals disappear without click
 
 var score = 0;
+var playarea = null;
+var likelike = null;
 var scoreDisplay = null;
+var transitionDurationName = null;
+var asteroidCoords = null;
+var displacement = null;
+var failures = -1;
+var duration = MINERAL_START_SPEED;
 
 function init() {
 	var ss = document.styleSheets[1];
 	var rule = 0;
 	if ('transition' in document.documentElement.style) {
 		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{transition-property:left,top,opacity;transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'transitionDuration';
 	} else if ('webkitTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;-webkit-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'webkitTranslationDuration';
 	} else if ('mozTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;-moz-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'mozTranslationDuration';
 	} else {
 		console.log('):');
 		return;
 	}
 	scoreDisplay = document.getElementById('scoreDisplay');
-	test();
+	playarea = document.getElementById('playarea');
+	likelike = document.getElementById('likelike');
+
+	// randomize asteroid coordinates
+	asteroidCoords = randomCoords();
+
+	// randomize mineral direction
+	displacement = randomDirection(MINERAL_DISPLACEMENT);
+
+	// place the target
+	likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
+	likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
+
+	test(false);
 }
 
-function test() {
-	var click_dx = MINERAL_DX * OVERSHOOT;
-	var click_dy = MINERAL_DY * OVERSHOOT;
-	asteroid(472 + 20 - click_dx, 52 + 10 - click_dy);
+function randomCoords() {
+  return {
+    x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
+    y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
+  };
+}
+
+function randomDirection(magnitude) {
+	var theta = Math.random() * 2 * Math.PI;
+	return {
+		x: magnitude * Math.cos(theta),
+		y: magnitude * Math.sin(theta)
+	};
+}
+
+function test(success) {
+	if (success) {
+		// clicked mineral
+		duration *= MINERAL_SPEED_INCREMENT;
+		failures = 0;
+	} else {
+		// mineral disappeared
+		if (++failures == FAILURES_BEFORE_ATTACK) {
+			likelike.style.visibility = 'visible';
+		}
+	}
+	asteroid(asteroidCoords.x, asteroidCoords.y);
 }
 
 function asteroid(x, y) {
@@ -68,35 +121,39 @@ function asteroid(x, y) {
 		div.className = 'dead';
 		div.style.opacity = '0';
 		setTimeout(function () {
-			document.body.removeChild(div);
+			playarea.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, MINERAL_DX,  MINERAL_DY);
+		mineral(x, y, displacement.x,  displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
 		number(x, y, '+1');
 		addScore(1);
-		setTimeout(test, 500);
 	});
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 }
 
-function mineral(x, y, dx, dy) {
+function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	var div = document.createElement('div');
 	div.className = 'mineral';
 	div.style.top = y + 'px';
 	div.style.left = x + 'px';
+	div.style[transitionDurationName] = displacementDuration + 'ms,' + displacementDuration + 'ms,' + fadeDuration + 'ms';
 	var tFade = setTimeout(function () {
 		div.style.opacity = '0';
-	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
+	}, displacementDuration - fadeDuration);
 	var tRemove = setTimeout(function () {
-		document.body.removeChild(div);
-	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
-	div.addEventListener('click', function (e) {
+		playarea.removeChild(div);
+		test(false);
+	}, displacementDuration);
+	div.addEventListener('mousedown', function (e) {
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
-		document.body.removeChild(div);
-		number(x + dx, y + dy, '+3');
+		playarea.removeChild(div);
+		var cx = e.clientX - playarea.offsetLeft;
+		var cy = e.clientY - playarea.offsetTop;
+		number(cx, cy, '+3');
 		addScore(3);
+		test(true);
 	});
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.top = y + dy + 'px';
 	div.style.left = x + dx + 'px';
@@ -109,9 +166,9 @@ function number(x, y, text) {
 	div.style.left = x + 'px';
 	div.textContent = text;
 	setTimeout(function () {
-		document.body.removeChild(div);
+		playarea.removeChild(div);
 	}, SCORE_SHOW_TIME);
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.left = x + SCORE_DX + 'px';
 	div.style.top = y + SCORE_DY + 'px';
@@ -127,5 +184,7 @@ function addScore(delta) {
 <p>This is an example of a game built in HTML and JavaScript.</p>
 <p>Blast the asteroids and grab the minerals before they disintegrate.</p>
 <p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
+<div id="playarea">
 <iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=dark&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+</div>
 <script>init();</script>
