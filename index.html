@@ -1,13 +1,17 @@
 <!doctype html>
 <style>
-html{background:black;font-family:sans-serif;color:white;}
-#likelike{position:absolute;top:52px;left:472px;}
+html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
+p{text-shadow:black 0 1px 3px;}
+#likelike{position:absolute;visibility:hidden;z-index:3;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
 #scoreDisplay{font-weight:bold;}
-.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");}
-.dead{position:absolute;margin:-22px -20px;width:40px;height:44px;background-image:url("http://i.imgur.com/vvTQy.png");}
-.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
+#blink{position:absolute;top:0;left:0;visibility:hidden;width:640px;height:480px;background-color:rgba(192,255,0,0.5);line-height:480px;text-align:center;font-weight:bold;font-size:180px;color:black;z-index:1;}
+#blink:after{content:"YES!";}
+.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");z-index:4;}
+.dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
+.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;z-index:4;}
 .number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
+.server{position:absolute;width:47px;height:24px;background-image:url("http://i.imgur.com/VOoaw.png");z-index:2;}
 </style>
 <style>/* this one is populated by javascript */</style>
 <script>
@@ -15,7 +19,7 @@ var
 ASTEROID_SPAWN_DELAY = 500, // time between asteroid click and next spawn
 ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
 
-SPAWN_TOP = 150, // area where asteroids can normally spawn, in pixels
+SPAWN_TOP = 180, // area where objects can normally spawn, in pixels
 SPAWN_BOTTOM = 480 - 30,
 SPAWN_LEFT = 30,
 SPAWN_RIGHT = 640 - 30,
@@ -25,21 +29,39 @@ SCORE_DX = 8, // movement of +x score text
 SCORE_DY = 0,
 
 MINERAL_DX = 0, // normal displacement of mineral
-MINERAL_DY = -64,
+MINERAL_DY = -40,
 MINERAL_ATTACK_DX = 0, // displacement of mineral on attack
-MINERAL_ATTACK_DY = -32,
-MINERAL_MOVE_TIME = 100, // time taken to displace mineral, in ms
+MINERAL_ATTACK_DY = -5,
+MINERAL_MOVE_TIME = 50, // time taken to displace mineral, in ms
 MINERAL_HOLD_TIME = 100, // time between arriving at final destination and fading start, in ms
 MINERAL_FADE_TIME = 200, // time to fade mineral, in ms
 
-FAST_THRESHOLD = 300, // click mineral at most this long after clicking the asteroid to be considered "fast," in ms
-FAST_BEFORE_ATTACK = 3; // launch attack after this many fast mineral clicks
+NUM_SERVERS = 12,
+SERVER_LIGHT_INTERVAL = 1500 / NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
 
+MIN_ADAPTATION = 3,
+MAX_ADAPTATION = 8,
+ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
+
+BLINK_DURATION = 100; // how long the distraction is visible
+
+
+var lights = [
+	'http://i.imgur.com/lNlKn.png',
+	'http://i.imgur.com/UxrBY.png'
+];
+
+var likelike = null;
 var score = 0;
 var scoreDisplay = null;
-var numFast = 0;
+var blink = null;
+var serverDivs = [];
+var serverCoords = [];
+var likeCoords = null;
+var remaining = 0;
 
 function init() {
+	// set up animation CSS
 	var ss = document.styleSheets[1];
 	var rule = 0;
 	if ('transition' in document.documentElement.style) {
@@ -58,38 +80,80 @@ function init() {
 		console.log('):');
 		return;
 	}
+
+	// add servers
+	for (var i = 0; i < NUM_SERVERS; i++) {
+		var c = randomCoords();
+		// servers aren't centered, so offset the coordinates
+		c.x -= 23;
+		c.y -= 12;
+		serverDivs.push(server(c.x, c.y));
+		serverCoords.push(c);
+	}
+
+	// get main elements
+	likelike = document.getElementById('likelike');
+	blink = document.getElementById('blink');
 	scoreDisplay = document.getElementById('scoreDisplay');
+
+	// make screen busier
+	setInterval(serverLights, SERVER_LIGHT_INTERVAL);
+
+	// start game
 	step();
 }
 
-function registerTime(t) {
-	document.title = t; // %%%
-	if (t != -1 && t < FAST_THRESHOLD) {
-		numFast++;
+function serverLights() {
+	var off = Math.random() < 0.5;
+	var lit = Math.floor(Math.random() * NUM_SERVERS);
+	if (off) {
+		serverDivs[lit].style.backgroundImage = '';
 	} else {
-		numFast = 0;
+		var color = Math.floor(Math.random() * lights.length);
+		serverDivs[lit].style.backgroundImage = 'url("' + lights[color] + '")';
 	}
 }
 
 function step() {
-	if (numFast < FAST_BEFORE_ATTACK) {
-		setTimeout(spawnRandom, ASTEROID_SPAWN_DELAY);
-	} else {
-		setTimeout(spawnAttack, ASTEROID_SPAWN_DELAY);
+	remaining--;
+	if (remaining == -1) {
+		// just clicked on attack asteroid, reset everything
+		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
+	} else if (remaining > ASTEROIDS_BEFORE_SWITCH) {
+		likelike.style.visibility = '';
 	}
+	if (remaining == ASTEROIDS_BEFORE_SWITCH) {
+		var cover = Math.floor(Math.random() * NUM_SERVERS);
+		likeCoords = serverCoords[cover];
+		likelike.style.visibility = 'visible';
+		likelike.style.top = likeCoords.y + 'px';
+		likelike.style.left = likeCoords.x + 'px';
+	}
+	if (remaining > 0) {
+		setTimeout(randomAsteroid, ASTEROID_SPAWN_DELAY);
+	} else {
+		setTimeout(attackAsteroid, ASTEROID_SPAWN_DELAY);
+	}
+	// %%% document.title = remaining;
 }
 
-function spawnRandom() {
-	var x = Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT);
-	var y = Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP);
-	asteroid(x, y);
+function randomCoords() {
+	return {
+		x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
+		y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
+	};
 }
 
-function spawnAttack() {
-	fakeAsteroid(500 - MINERAL_DX, 62 - MINERAL_DY);
+function randomAsteroid() {
+	var c = randomCoords();
+	asteroid(c.x, c.y, MINERAL_DX, MINERAL_DY);
 }
 
-function fakeAsteroid(x, y) {
+function attackAsteroid() {
+	asteroid(likeCoords.x + 23 - MINERAL_DX, likeCoords.y + 12 - MINERAL_DY, MINERAL_ATTACK_DX, MINERAL_ATTACK_DY);
+}
+
+function asteroid(x, y, dx, dy) {
 	var div = document.createElement('div');
 	div.className = 'asteroid';
 	div.style.top = y + 'px';
@@ -101,28 +165,12 @@ function fakeAsteroid(x, y) {
 		setTimeout(function () {
 			document.body.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, MINERAL_ATTACK_DX,  MINERAL_ATTACK_DY);
+		mineral(x, y, dx, dy);
 		number(x, y, '+1');
-		addScore(1);
-		// game ends here, so we don't call step()
-	});
-	document.body.appendChild(div);
-}
-
-function asteroid(x, y) {
-	var div = document.createElement('div');
-	div.className = 'asteroid';
-	div.style.top = y + 'px';
-	div.style.left = x + 'px';
-	div.addEventListener('click', function (e) {
-		if (div.className == 'dead') return;
-		div.className = 'dead';
-		div.style.opacity = '0';
+		blink.style.visibility = 'visible';
 		setTimeout(function () {
-			document.body.removeChild(div);
-		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, MINERAL_DX,  MINERAL_DY);
-		number(x, y, '+1');
+			blink.style.visibility = '';
+		}, BLINK_DURATION);
 		addScore(1);
 		step();
 	});
@@ -130,7 +178,6 @@ function asteroid(x, y) {
 }
 
 function mineral(x, y, dx, dy) {
-	var startTime = Date.now();
 	var div = document.createElement('div');
 	div.className = 'mineral';
 	div.style.top = y + 'px';
@@ -140,11 +187,8 @@ function mineral(x, y, dx, dy) {
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
 	var tRemove = setTimeout(function () {
 		document.body.removeChild(div);
-		registerTime(-1);
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
 	div.addEventListener('click', function (e) {
-		var endTime = Date.now();
-		registerTime(endTime - startTime);
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
 		document.body.removeChild(div);
@@ -173,6 +217,15 @@ function number(x, y, text) {
 	div.style.opacity = '0';
 }
 
+function server(x, y) {
+	var div = document.createElement('div');
+	div.className = 'server';
+	div.style.top = y + 'px';
+	div.style.left = x + 'px';
+	document.body.appendChild(div);
+	return div;
+}
+
 function addScore(delta) {
 	score += delta;
 	scoreDisplay.textContent = score;
@@ -180,7 +233,9 @@ function addScore(delta) {
 </script>
 <body>
 <p>This is an example of a game built in HTML and JavaScript.</p>
-<p>Blast the asteroids and grab the minerals before they disintegrate.</p>
+<p>Protect your space datacenter by blasting the asteroids.</p>
+<p>Get bonus points for grabbing minerals before they disintegrate.</p>
 <p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
 <iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=dark&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+<div id="blink"></div>
 <script>init();</script>
