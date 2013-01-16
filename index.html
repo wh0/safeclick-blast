@@ -55,12 +55,12 @@ function init() {
 		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
 		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
-		transitionDurationName = 'webkitTranslationDuration';
+		transitionDurationName = 'webkitTransitionDuration';
 	} else if ('mozTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
 		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
-		transitionDurationName = 'mozTranslationDuration';
+		transitionDurationName = 'mozTransitionDuration';
 	} else {
 		console.log('):');
 		return;
