@@ -31,6 +31,7 @@ MINERAL_START_SPEED = 200 / 60 * 1000, // the first mineral takes this long to d
 MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
 MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
 
+ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
 FAILURES_BEFORE_ATTACK = 3; // show target after this many consecutive minerals disappear without click
 
 var score = 0;
@@ -40,6 +41,7 @@ var scoreDisplay = null;
 var transitionDurationName = null;
 var asteroidCoords = null;
 var displacement = null;
+var attempts = -1;
 var failures = -1;
 var duration = MINERAL_START_SPEED;
 
@@ -94,18 +96,24 @@ function test(success) {
 	// randomize mineral direction
 	displacement = randomDirection(MINERAL_DISPLACEMENT);
 
+	attempts++;
 	if (success) {
 		// clicked mineral
 		duration *= MINERAL_SPEED_INCREMENT;
 		failures = 0;
 	} else {
 		// mineral disappeared
-		if (++failures == FAILURES_BEFORE_ATTACK) {
-			// place the target
-			likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
-			likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
-			likelike.style.visibility = 'visible';
-		}
+		failures++;
+	}
+
+	if (attempts == ASTEROIDS_BEFORE_ATTACK || ++failures == FAILURES_BEFORE_ATTACK) {
+		// place the target
+		likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
+		likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
+		likelike.style.visibility = 'visible';
+		// reset counters
+		attempts = 0;
+		failures = 0;
 	}
 
 	asteroid(asteroidCoords.x, asteroidCoords.y);
