@@ -1,0 +1,223 @@
+<!doctype html>
+<style>
+html{background-color:#000000;}
+#field{position:absolute;top:0;bottom:0;right:10px;width:150px;}
+#destination{position:absolute;left:0;margin:-6px;padding:6px;width:105px;height:48px;background-image:url("http://i.imgur.com/NsLrM.png");z-index:2;}
+#destination .instruction{visibility:hidden;margin:3px;padding:3px;}
+#destination .left{background-image:url("http://i.imgur.com/t9EBh.png");}
+#destination .right{background-image:url("http://i.imgur.com/oihyX.png");}
+#score{position:absolute;left:117px;color:white;}
+.row{position:absolute;top:0;transition-property:top;z-index:3;}
+.instruction{position:absolute;top:0;width:48px;height:48px;}
+.left{left:0;background-image:url("http://i.imgur.com/5rf7N.png");}
+.right{left:57px;background-image:url("http://i.imgur.com/gKfWg.png");}
+#playposition{position:absolute;bottom:0;left:0;right:0;height:60px;background-color:#606060}
+#likelike,#fake{position:absolute;left:10px;top:10px;}
+#likelike{visibility:hidden;z-index:8;}
+#fake{font:11px "Lucida Grande","Tahoma","Verdana","Arial",sans-serif;}
+#fake img{vertical-align:middle;}
+#fake .button{display:inline-block;vertical-align:middle;border-radius:3px;border:1px solid #eeac9d;padding:3px 3px 4px 6px;background-color:#f5f3ed;color:#98593b;cursor:pointer;}
+#fake .button img{position:relative;top:-1px;}
+#fake .description{display:inline;position:relative;top:1px;color:#333333;}
+#fake .description img{position:relative;top:-1px;}
+</style>
+<style>/* populated by javascript */</style>
+<script>
+0;
+
+var ATTACK = {}; // dummy nonce
+var L = {button: 0, className: 'left'};
+var R = {button: 2, className: 'right'};
+
+var
+SCROLL_AMOUNT = 360,
+SCROLL_TIME = 6000,
+TARGET_DELAY = 5000,
+TOLERANCE = 100,
+ATTACK_STABILITY = 1000,
+SPEED = 1000, // ms per tick
+MOVES = [
+	[1, L, ATTACK],
+	[0.5, R],
+	[1, R],
+
+	[1, L, R],
+	[0.5, R],
+	[1.5, R],
+
+
+	[1, L],
+	[0.5, R],
+	[1, R],
+
+	[1, L, R],
+	[0.5, R],
+	[1.5, R],
+
+
+	[1, L, ATTACK],
+	[0.5, R],
+	[1, R],
+
+	[1, L, R],
+	[0.5, R],
+	[1.5, R]
+
+
+];
+
+var field;
+var score;
+var likelike;
+var fake;
+var sensor;
+var receiver;
+
+function getTransitionPrefix() {
+	var s = document.documentElement.style;
+	if ('transition' in s) return '';
+	if ('webkitTransition' in s) return '-webkit-';
+	if ('mozTransition' in s) return '-moz-';
+	throw '): transitions';
+}
+
+function init() {
+	// set up animations
+	var prefix = getTransitionPrefix();
+	var dst = SCROLL_AMOUNT * TARGET_DELAY / SCROLL_TIME;
+	var ss = document.styleSheets[1];
+	ss.insertRule('#destination,#score{top:' + dst + 'px;}', 0);
+	ss.insertRule('.row{' + prefix + 'transition-duration:' + SCROLL_TIME + 'ms;' + prefix + 'transition-timing-function:linear;}', 0);
+
+	field = document.getElementById('field');
+	score = document.getElementById('score');
+	likelike = document.getElementById('likelike');
+	fake = document.getElementById('fake');
+	sensor = document.getElementById('sensor');
+	sensor.addEventListener('mousedown', function (e) {
+		e.preventDefault();
+		var indicator = document.getElementById('indicator_' + e.button);
+		if (indicator) indicator.style.visibility = 'visible';
+		if (receiver) receiver(e);
+	});
+	sensor.addEventListener('mouseup', function (e) {
+		e.preventDefault();
+		var indicator = document.getElementById('indicator_' + e.button);
+		if (indicator) indicator.style.visibility = '';
+		if (receiver) receiver(e);
+	});
+	sensor.addEventListener('contextmenu', function (e) {
+		e.preventDefault();
+	});
+
+	sensor.addEventListener('mouseover', handleEnter);
+}
+
+function handleEnter(e) {
+	sensor.removeEventListener('mouseover', handleEnter);
+	start();
+}
+
+function start() {
+	var startTime = Date.now();
+	var index = 0;
+	var total = 0;
+	var s = 0;
+
+	score.textContent = '0';
+
+	function addScore(n) {
+		s += n;
+		score.textContent = s;
+	}
+
+	function scheduleMove(move, now) {
+		var isAttack = false;
+		var target = now + TARGET_DELAY;
+		var sense = {};
+		var row = document.createElement('div');
+		row.className = 'row';
+		for (var i = 1; i < move.length; i++) {
+			var inst = move[i];
+			if (inst === ATTACK) {
+				isAttack = true;
+				continue;
+			}
+			var div = document.createElement('div');
+			div.className = 'instruction ' + inst.className;
+			row.appendChild(div);
+			sense[inst.button] = div;
+		}
+		field.appendChild(row);
+		setTimeout(function () {
+			field.removeChild(row);
+		}, SCROLL_TIME);
+		var dummy = row.clientHeight;
+		row.style.top = SCROLL_AMOUNT + 'px';
+		setTimeout(function () {
+			row.style.zIndex = '1';
+		}, TARGET_DELAY);
+		if (isAttack) {
+			setTimeout(function () {
+				likelike.style.visibility = 'visible';
+				fake.style.visibility = 'hidden';
+			}, TARGET_DELAY - ATTACK_STABILITY);
+			setTimeout(function () {
+				likelike.style.visibility = '';
+				fake.style.visibility = '';
+			}, TARGET_DELAY + TOLERANCE);
+		} else {
+			var rec = function (e) {
+				if (!sense[e.button]) return;
+				var time = Date.now() - startTime;
+				var distance = time - target;
+				console.log(distance); // %%%
+				addScore(1);
+				sense[e.button].style.opacity = '0.1';
+				delete sense[e.button];
+			};
+			setTimeout(function () {
+				if (receiver == null) receiver = rec;
+				else console.warn('moves too close');
+				row.className = 'row active';
+			}, TARGET_DELAY - TOLERANCE);
+			setTimeout(function () {
+				if (receiver == rec) receiver = null;
+				else console.warn('moves too close');
+				row.className = 'row';
+			}, TARGET_DELAY + TOLERANCE);
+		}
+	}
+
+	function step() {
+		if (index >= MOVES.length) {
+			setTimeout(function () {
+				if (confirm('game over. your score was ' + s +'. play again?')) {
+					location.reload();
+				}
+			}, TARGET_DELAY);
+			return;
+		}
+		var now = Date.now() - startTime;
+		scheduleMove(MOVES[index], now);
+		total += MOVES[index][0];
+		index++;
+		setTimeout(step, Math.max(0, total * SPEED - now));
+	}
+
+	step();
+}
+</script>
+<body>
+<div id="field">
+	<div id="destination">
+		<div id="indicator_0" class="instruction left"></div>
+		<div id="indicator_2" class="instruction right"></div>
+	</div>
+	<div id="score"></div>
+</div>
+<div id="playposition">
+	<iframe id="likelike" src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=light&amp;action=like&amp;height=35" scrolling="no" frameborder="0" style="border:none; overflow:hidden; width:450px; height:35px;" allowTransparency="true"></iframe>
+	<div id="fake"><div id="sensor" class="button"><img src="http://i.imgur.com/NF2uq.png">Play</div><div class="description"><img src="http://i.imgur.com/DEUG7.png">Put mouse here to play.</div></div>
+</div>
+<script>init();</script>
