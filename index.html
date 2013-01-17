@@ -72,13 +72,6 @@ function init() {
 	// randomize asteroid coordinates
 	asteroidCoords = randomCoords();
 
-	// randomize mineral direction
-	displacement = randomDirection(MINERAL_DISPLACEMENT);
-
-	// place the target
-	likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
-	likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
-
 	test(false);
 }
 
@@ -98,6 +91,9 @@ function randomDirection(magnitude) {
 }
 
 function test(success) {
+	// randomize mineral direction
+	displacement = randomDirection(MINERAL_DISPLACEMENT);
+
 	if (success) {
 		// clicked mineral
 		duration *= MINERAL_SPEED_INCREMENT;
@@ -105,9 +101,13 @@ function test(success) {
 	} else {
 		// mineral disappeared
 		if (++failures == FAILURES_BEFORE_ATTACK) {
+			// place the target
+			likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
+			likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
 			likelike.style.visibility = 'visible';
 		}
 	}
+
 	asteroid(asteroidCoords.x, asteroidCoords.y);
 }
 
