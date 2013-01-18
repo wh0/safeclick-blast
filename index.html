@@ -5,8 +5,11 @@ p{text-shadow:black 0 1px 3px;}
 #likelike{position:absolute;visibility:hidden;z-index:3;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
 #scoreDisplay{font-weight:bold;}
-#blink{position:absolute;top:0;left:0;visibility:hidden;width:640px;height:480px;background-color:rgba(192,255,0,0.5);line-height:480px;text-align:center;font-weight:bold;font-size:180px;color:black;z-index:1;}
-#blink:after{content:"YES!";}
+#blink{position:absolute;top:0;left:0;visibility:hidden;width:640px;height:480px;line-height:480px;text-align:center;font-weight:bold;font-size:180px;color:black;z-index:1;}
+#blink.yes{background-color:rgba(192,255,0,0.5);}
+#blink.yes:after{content:"YES!";}
+#blink.no{background-color:rgba(255,96,0,0.5);}
+#blink.no:after{content:"NO!";}
 .asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/YLScueS.png");z-index:4;}
 .dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
 .mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;z-index:4;}
@@ -45,7 +48,9 @@ MIN_ADAPTATION = 3,
 MAX_ADAPTATION = 8,
 ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
 
-BLINK_DURATION = 100; // how long the distraction is visible
+BLINK_DURATION = 100, // how long the distraction is visible
+BLINK_CLICK_ASTEROID = 'yes',
+BLINK_MINERAL_DISINTEGRATE = null;
 
 
 var lights = [
@@ -162,6 +167,15 @@ function attackAsteroid() {
 	asteroid(likeCoords.x + 23 - MINERAL_DX, likeCoords.y + 12 - MINERAL_DY, MINERAL_ATTACK_DX, MINERAL_ATTACK_DY);
 }
 
+function execBlink(type) {
+	if (!type) return;
+	blink.className = type;
+	blink.style.visibility = 'visible';
+	setTimeout(function () {
+		blink.style.visibility = '';
+	}, BLINK_DURATION);
+}
+
 function asteroid(x, y, dx, dy) {
 	var div = document.createElement('div');
 	div.className = 'asteroid';
@@ -176,10 +190,7 @@ function asteroid(x, y, dx, dy) {
 		}, ASTEROID_EXPLODE_TIME);
 		mineral(x, y, dx, dy);
 		number(x, y, '+1');
-		blink.style.visibility = 'visible';
-		setTimeout(function () {
-			blink.style.visibility = '';
-		}, BLINK_DURATION);
+		execBlink(BLINK_CLICK_ASTEROID);
 		addScore(1);
 		step();
 	});
@@ -196,6 +207,7 @@ function mineral(x, y, dx, dy) {
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
 	var tRemove = setTimeout(function () {
 		document.body.removeChild(div);
+		execBlink(BLINK_MINERAL_DISINTEGRATE);
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
 	div.addEventListener('click', function (e) {
 		clearTimeout(tFade);
