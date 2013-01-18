@@ -6,6 +6,7 @@ html{background:black;font-family:sans-serif;color:white;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
 #scoreDisplay{font-weight:bold;}
 .asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");}
+.hint{position:absolute;}
 .dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
 .mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
 .number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
@@ -118,10 +119,25 @@ function test(success) {
 		failures = 0;
 	}
 
-	asteroid(asteroidCoords.x, asteroidCoords.y);
+	var h = hint(asteroidCoords, displacement);
+	asteroid(asteroidCoords.x, asteroidCoords.y, h);
 }
 
-function asteroid(x, y) {
+function hint(origin, vector) {
+	var c = vector.x / MINERAL_DISPLACEMENT;
+	var s = vector.y / MINERAL_DISPLACEMENT;
+	var mat = [c, s, -s, c, 0, 0];
+	var div = document.createElement('div');
+	div.className = 'hint';
+	div.style.top = origin.y + 'px';
+	div.style.left = origin.x + 'px';
+	div.style.transform = 'translate(-50%,-50%) matrix(' + mat.join(',') + ') translate(40px,0)';
+	div.textContent = '>>>';
+	playarea.appendChild(div);
+	return div;
+}
+
+function asteroid(x, y, other) {
 	var div = document.createElement('div');
 	div.className = 'asteroid';
 	div.style.top = y + 'px';
@@ -129,6 +145,7 @@ function asteroid(x, y) {
 	div.addEventListener('click', function (e) {
 		if (div.className == 'dead') return;
 		div.className = 'dead';
+		if (other) playarea.removeChild(other);
 		div.style.opacity = '0';
 		setTimeout(function () {
 			playarea.removeChild(div);
