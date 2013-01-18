@@ -29,6 +29,7 @@ OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
 MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
 MINERAL_START_SPEED = 200 / 60 * 1000, // the first mineral takes this long to displace, in ms
 MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
+MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
 MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
 
 ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
@@ -103,6 +104,7 @@ function test(success) {
 		failures = 0;
 	} else {
 		// mineral disappeared
+		duration *= MINERAL_SPEED_DECREMENT;
 		failures++;
 	}
 
