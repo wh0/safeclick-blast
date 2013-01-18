@@ -12,6 +12,8 @@ p{text-shadow:black 0 1px 3px;}
 .mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;z-index:4;}
 .number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
 .server{position:absolute;width:47px;height:24px;background-image:url("http://i.imgur.com/VOoaw.png");z-index:2;}
+.server:after{margin-left:47px;content:url("http://i.imgur.com/u9sxq.png");}
+.covered-server{position:absolute;visibility:hidden;}
 </style>
 <style>/* this one is populated by javascript */</style>
 <script>
@@ -59,6 +61,7 @@ var serverDivs = [];
 var serverCoords = [];
 var likeCoords = null;
 var remaining = 0;
+var coveredServer = null;
 
 function init() {
 	// set up animation CSS
@@ -121,13 +124,19 @@ function step() {
 		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
 	} else if (remaining > ASTEROIDS_BEFORE_SWITCH) {
 		likelike.style.visibility = '';
+		if (coveredServer) {
+			coveredServer.className = 'server';
+			coveredServer = null;
+		}
 	}
 	if (remaining == ASTEROIDS_BEFORE_SWITCH) {
 		var cover = Math.floor(Math.random() * NUM_SERVERS);
 		likeCoords = serverCoords[cover];
-		likelike.style.visibility = 'visible';
+		coveredServer = serverDivs[cover];
+		coveredServer.className = 'covered-server';
 		likelike.style.top = likeCoords.y + 'px';
 		likelike.style.left = likeCoords.x + 'px';
+		likelike.style.visibility = 'visible';
 	}
 	if (remaining > 0) {
 		setTimeout(randomAsteroid, ASTEROID_SPAWN_DELAY);
