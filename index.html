@@ -1,217 +1,96 @@
 <!doctype html>
 <style>
-html{background:black;font-family:sans-serif;color:white;}
-#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
-#likelike{position:absolute;visibility:hidden;}
-#scoreLine{font-size:smaller;color:#a0a0a0;}
-#scoreDisplay{font-weight:bold;}
-.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/OcA4a.png");}
-.hint{position:absolute;}
-.dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
-.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
-.number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
+html{min-height:100%;line-height:16px;font-size:13px;font-family:sans-serif;color:#333333;}
+#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;cursor:none;}
+#decoy{position:absolute;top:232px;right:344px;margin:0;text-align:right;}
+#decoy a{cursor:inherit;}
+#likelike{position:absolute;top:228px;left:297px;}
+#pointer{position:fixed;visibility:hidden;pointer-events:none;}
 </style>
-<style>/* this one is populated by javascript */</style>
 <script>
 var
-ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
+DISTORTION_RADIUS = 240,
+DISTORTION_X = -40,
+DISTORTION_Y = 0,
+DISTORTION_FUNCTION = function (r) { return Math.cos(r * Math.PI) / 2 + 0.5; };
 
-SPAWN_TOP = 80, // area where objects can normally spawn, in pixels
-SPAWN_BOTTOM = 480 - 80,
-SPAWN_LEFT = 80,
-SPAWN_RIGHT = 640 - 80,
-
-SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
-SCORE_DX = 8, // movement of +x score text
-SCORE_DY = 0,
-
-OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
-
-MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
-MINERAL_START_SPEED = 200 / 60 * 1000, // the first mineral takes this long to displace, in ms
-MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
-MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
-MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
-
-ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
-FAILURES_BEFORE_ATTACK = 3; // show target after this many consecutive minerals disappear without click
-
-var score = 0;
 var playarea = null;
 var likelike = null;
-var scoreDisplay = null;
-var transitionDurationName = null;
-var asteroidCoords = null;
-var displacement = null;
-var attempts = -1;
-var failures = -1;
-var duration = MINERAL_START_SPEED;
+var pointer = null;
+var ox, oy;
 
 function init() {
-	var ss = document.styleSheets[1];
-	var rule = 0;
-	if ('transition' in document.documentElement.style) {
-		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{transition-property:left,top,opacity;}', rule++);
-		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
-		transitionDurationName = 'transitionDuration';
-	} else if ('webkitTransition' in document.documentElement.style) {
-		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
-		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
-		transitionDurationName = 'webkitTransitionDuration';
-	} else if ('mozTransition' in document.documentElement.style) {
-		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
-		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
-		transitionDurationName = 'mozTransitionDuration';
-	} else {
-		console.log('):');
-		return;
-	}
-	scoreDisplay = document.getElementById('scoreDisplay');
 	playarea = document.getElementById('playarea');
 	likelike = document.getElementById('likelike');
+	pointer = document.getElementById('pointer');
 
-	// randomize asteroid coordinates
-	asteroidCoords = randomCoords();
+	playarea.addEventListener('mousemove', move);
+	playarea.addEventListener('mouseover', over);
+	playarea.addEventListener('mouseout', out);
+	likelike.addEventListener('mouseover', likeover);
+	window.addEventListener('resize', resize);
+	resize(null);
 
-	test(false);
+	addEventListener('keydown', down);
+	addEventListener('keyup', up);
 }
 
-function randomCoords() {
-  return {
-    x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
-    y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
-  };
+function over(e) {
+	if (e.target == playarea) pointer.style.visibility = 'visible';
 }
 
-function randomDirection(magnitude) {
-	var theta = Math.random() * 2 * Math.PI;
-	return {
-		x: magnitude * Math.cos(theta),
-		y: magnitude * Math.sin(theta)
-	};
+function out(e) {
+	if (e.target != playarea) return;
+	var comp = playarea.compareDocumentPosition(e.relatedTarget);
+	if (comp & playarea.DOCUMENT_POSITION_CONTAINED_BY) return;
+	pointer.style.visibility = '';
 }
 
-function test(success) {
-	// randomize mineral direction
-	displacement = randomDirection(MINERAL_DISPLACEMENT);
-
-	attempts++;
-	if (success) {
-		// clicked mineral
-		duration *= MINERAL_SPEED_INCREMENT;
-		failures = 0;
+function move(e) {
+	var cx = e.clientX;
+	var cy = e.clientY;
+	var dx = cx - ox;
+	var dy = cy - oy;
+	var dist = Math.sqrt(dx * dx + dy * dy);
+	var ax, ay;
+	if (dist < DISTORTION_RADIUS) {
+		var v = DISTORTION_FUNCTION(dist / DISTORTION_RADIUS);
+		ax = v * DISTORTION_X;
+		ay = v * DISTORTION_Y;
 	} else {
-		// mineral disappeared
-		duration *= MINERAL_SPEED_DECREMENT;
-		failures++;
+		ax = ay = 0;
 	}
+	pointer.style.top = cy + ay + 'px';
+	pointer.style.left = cx + ax + 'px';
+}
 
-	if (attempts == ASTEROIDS_BEFORE_ATTACK || ++failures == FAILURES_BEFORE_ATTACK) {
-		// place the target
-		likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
-		likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
-		likelike.style.visibility = 'visible';
-		// reset counters
-		attempts = 0;
-		failures = 0;
+function resize(e) {
+	ox = playarea.offsetLeft + playarea.offsetWidth / 2;
+	oy = playarea.offsetTop + playarea.offsetHeight / 2;
+}
+
+function likeover(e) {
+	pointer.style.visibility = '';
+}
+
+function down(e) {
+	if (e.shiftKey) {
+		playarea.style.backgroundColor = '#f0f0f0';
+		playarea.style.cursor = 'crosshair';
 	}
-
-	var h = hint(asteroidCoords, displacement);
-	asteroid(asteroidCoords.x, asteroidCoords.y, h);
 }
 
-function hint(origin, vector) {
-	var c = vector.x / MINERAL_DISPLACEMENT;
-	var s = vector.y / MINERAL_DISPLACEMENT;
-	var mat = [c, s, -s, c, 0, 0];
-	var div = document.createElement('div');
-	div.className = 'hint';
-	div.style.top = origin.y + 'px';
-	div.style.left = origin.x + 'px';
-	div.style.transform = 'translate(-50%,-50%) matrix(' + mat.join(',') + ') translate(40px,0)';
-	div.textContent = '>>>';
-	playarea.appendChild(div);
-	return div;
-}
-
-function asteroid(x, y, other) {
-	var div = document.createElement('div');
-	div.className = 'asteroid';
-	div.style.top = y + 'px';
-	div.style.left = x + 'px';
-	div.addEventListener('click', function (e) {
-		if (div.className == 'dead') return;
-		div.className = 'dead';
-		if (other) playarea.removeChild(other);
-		div.style.opacity = '0';
-		setTimeout(function () {
-			playarea.removeChild(div);
-		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, displacement.x,  displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
-		number(x, y, '+1');
-		addScore(1);
-	});
-	playarea.appendChild(div);
-}
-
-function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
-	var div = document.createElement('div');
-	div.className = 'mineral';
-	div.style.top = y + 'px';
-	div.style.left = x + 'px';
-	div.style[transitionDurationName] = displacementDuration + 'ms,' + displacementDuration + 'ms,' + fadeDuration + 'ms';
-	var tFade = setTimeout(function () {
-		div.style.opacity = '0';
-	}, displacementDuration - fadeDuration);
-	var tRemove = setTimeout(function () {
-		playarea.removeChild(div);
-		test(false);
-	}, displacementDuration);
-	div.addEventListener('mousedown', function (e) {
-		clearTimeout(tFade);
-		clearTimeout(tRemove);
-		playarea.removeChild(div);
-		var cx = e.clientX - playarea.offsetLeft;
-		var cy = e.clientY - playarea.offsetTop;
-		number(cx, cy, '+3');
-		addScore(3);
-		test(true);
-	});
-	playarea.appendChild(div);
-	var dummy = div.clientHeight; // flush initialization
-	div.style.top = y + dy + 'px';
-	div.style.left = x + dx + 'px';
-}
-
-function number(x, y, text) {
-	var div = document.createElement('div');
-	div.className = 'number';
-	div.style.top = y + 'px';
-	div.style.left = x + 'px';
-	div.textContent = text;
-	setTimeout(function () {
-		playarea.removeChild(div);
-	}, SCORE_SHOW_TIME);
-	playarea.appendChild(div);
-	var dummy = div.clientHeight; // flush initialization
-	div.style.left = x + SCORE_DX + 'px';
-	div.style.top = y + SCORE_DY + 'px';
-	div.style.opacity = '0';
-}
-
-function addScore(delta) {
-	score += delta;
-	scoreDisplay.textContent = score;
+function up(e) {
+	if (!e.shiftKey) {
+		playarea.style.backgroundColor = '';
+		playarea.style.cursor = '';
+	}
 }
 </script>
 <body>
-<p>This is an example of a game built in HTML and JavaScript.</p>
-<p>Blast the asteroids and grab the minerals before they disintegrate.</p>
-<p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
 <div id="playarea">
-<iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=dark&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+	<p id="decoy">feel free to click <a href="/">here</a></p>
+	<iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=light&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+	<img id="pointer" src="http://i.imgur.com/EWmYMN2.png">
 </div>
 <script>init();</script>
