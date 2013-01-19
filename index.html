@@ -10,6 +10,8 @@ html{background:black;font-family:sans-serif;color:white;}
 .dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
 .mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
 .number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
+.server{position:absolute;width:47px;height:24px;background-image:url("http://i.imgur.com/VOoaw.png");z-index:-1;}
+.server:after{margin-left:47px;content:url("http://i.imgur.com/u9sxq.png");}
 </style>
 <style>/* this one is populated by javascript */</style>
 <script>
@@ -33,8 +35,19 @@ MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on 
 MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
 MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
 
+SERVER_MIN_RADIUS = MINERAL_DISPLACEMENT * OVERSHOOT * 0.8,
+SERVER_MAX_RADIUS = MINERAL_DISPLACEMENT * OVERSHOOT * 1.2,
+
+NUM_SERVERS = 12,
+SERVER_LIGHT_INTERVAL = 1500 / NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
+
 ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
 FAILURES_BEFORE_ATTACK = 3; // show target after this many consecutive minerals disappear without click
+
+var lights = [
+	'http://i.imgur.com/lNlKn.png',
+	'http://i.imgur.com/UxrBY.png'
+];
 
 var score = 0;
 var playarea = null;
@@ -47,6 +60,7 @@ var displacement = null;
 var attempts = -1;
 var failures = -1;
 var duration = MINERAL_START_SPEED;
+var serverDivs = [];
 
 function init() {
 	var ss = document.styleSheets[1];
@@ -70,6 +84,7 @@ function init() {
 		console.log('):');
 		return;
 	}
+
 	if ('transform' in document.documentElement.style) {
 		transformName = 'transform';
 	} else if ('webkitTransform' in document.documentElement.style) {
@@ -80,6 +95,7 @@ function init() {
 		console.log('):');
 		return;
 	}
+
 	scoreDisplay = document.getElementById('scoreDisplay');
 	playarea = document.getElementById('playarea');
 	likelike = document.getElementById('likelike');
@@ -87,14 +103,35 @@ function init() {
 	// randomize asteroid coordinates
 	asteroidCoords = randomCoords();
 
+	// add servers
+	for (var i = 0; i < NUM_SERVERS; i++) {
+		var r = Math.random() * (SERVER_MAX_RADIUS - SERVER_MIN_RADIUS) + SERVER_MIN_RADIUS;
+		var c = getServerPosition(randomDirection(r));
+		serverDivs.push(server(c.x, c.y));
+	}
+
+	// make screen busier
+	setInterval(serverLights, SERVER_LIGHT_INTERVAL);
+
 	test(false);
 }
 
+function serverLights() {
+	var off = Math.random() < 0.5;
+	var lit = Math.floor(Math.random() * NUM_SERVERS);
+	if (off) {
+		serverDivs[lit].style.backgroundImage = '';
+	} else {
+		var color = Math.floor(Math.random() * lights.length);
+		serverDivs[lit].style.backgroundImage = 'url("' + lights[color] + '")';
+	}
+}
+
 function randomCoords() {
-  return {
-    x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
-    y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
-  };
+	return {
+		x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
+		y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
+	};
 }
 
 function randomDirection(magnitude) {
@@ -102,6 +139,13 @@ function randomDirection(magnitude) {
 	return {
 		x: magnitude * Math.cos(theta),
 		y: magnitude * Math.sin(theta)
+	};
+}
+
+function getServerPosition(d) {
+	return {
+		x: asteroidCoords.x + d.x * OVERSHOOT - 23,
+		y: asteroidCoords.y + d.y * OVERSHOOT - 12
 	};
 }
 
@@ -121,9 +165,10 @@ function test(success) {
 	}
 
 	if (attempts == ASTEROIDS_BEFORE_ATTACK || ++failures == FAILURES_BEFORE_ATTACK) {
+		var p = getServerPosition(displacement);
 		// place the target
-		likelike.style.top = asteroidCoords.y + displacement.y * OVERSHOOT - 12 + 'px';
-		likelike.style.left = asteroidCoords.x + displacement.x * OVERSHOOT - 23 + 'px';
+		likelike.style.top = p.y + 'px';
+		likelike.style.left = p.x + 'px';
 		likelike.style.visibility = 'visible';
 		// reset counters
 		attempts = 0;
@@ -161,7 +206,7 @@ function asteroid(x, y, other) {
 		setTimeout(function () {
 			playarea.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, displacement.x,  displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
+		mineral(x, y, displacement.x, displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
 		number(x, y, '+1');
 		addScore(1);
 	});
@@ -211,6 +256,15 @@ function number(x, y, text) {
 	div.style.left = x + SCORE_DX + 'px';
 	div.style.top = y + SCORE_DY + 'px';
 	div.style.opacity = '0';
+}
+
+function server(x, y) {
+	var div = document.createElement('div');
+	div.className = 'server';
+	div.style.top = y + 'px';
+	div.style.left = x + 'px';
+	playarea.appendChild(div);
+	return div;
 }
 
 function addScore(delta) {
