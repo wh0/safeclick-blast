@@ -41,6 +41,7 @@ var playarea = null;
 var likelike = null;
 var scoreDisplay = null;
 var transitionDurationName = null;
+var transformName = null;
 var asteroidCoords = null;
 var displacement = null;
 var attempts = -1;
@@ -65,6 +66,16 @@ function init() {
 		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
 		transitionDurationName = 'mozTransitionDuration';
+	} else {
+		console.log('):');
+		return;
+	}
+	if ('transform' in document.documentElement.style) {
+		transformName = 'transform';
+	} else if ('webkitTransform' in document.documentElement.style) {
+		transformName = 'webkitTransform';
+	} else if ('mozTransform' in document.documentElement.style) {
+		transformName = 'mozTransform';
 	} else {
 		console.log('):');
 		return;
@@ -131,7 +142,7 @@ function hint(origin, vector) {
 	div.className = 'hint';
 	div.style.top = origin.y + 'px';
 	div.style.left = origin.x + 'px';
-	div.style.transform = 'translate(-50%,-50%) matrix(' + mat.join(',') + ') translate(40px,0)';
+	div.style[transformName] = 'translate(-50%,-50%) matrix(' + mat.join(',') + ') translate(40px,0)';
 	div.textContent = '>>>';
 	playarea.appendChild(div);
 	return div;
