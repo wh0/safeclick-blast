@@ -2,24 +2,43 @@
 <style>
 html{min-height:100%;line-height:16px;font-size:13px;font-family:sans-serif;color:#333333;}
 #playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;cursor:none;}
-#decoy{position:absolute;top:232px;right:304px;margin:0;text-align:right;}
+#decoy{position:absolute;top:232px;right:424px;margin:0;text-align:right;z-index:2;}
 #decoy a{cursor:inherit;}
-#likelike{position:absolute;top:228px;left:337px;}
+#likelike{position:absolute;top:228px;left:297px;z-index:2;}
 #pointer{position:fixed;visibility:hidden;pointer-events:none;}
+.random{position:absolute;z-index:1;}
 </style>
+<style>/* this one is populated by javascript */</style>
 <script>
 var
-DISTORTION_RADIUS = 60,
-DISTORTION_X = -40,
+DISTORTION_RADIUS = 240,
+DISTORTION_X = -120,
 DISTORTION_Y = 0,
-DISTORTION_FUNCTION = function (r) { return Math.cos(r * Math.PI) / 2 + 0.5; };
+DISTORTION_FUNCTION = function (r) { return Math.cos(r * Math.PI) / 2 + 0.5; },
+
+RANDOM_MOVE_TIME = 1000;
 
 var playarea = null;
 var likelike = null;
 var pointer = null;
+var distractInterval = null;
 var ox, oy;
 
 function init() {
+	// set up animation CSS
+	var ss = document.styleSheets[1];
+	var rule = 0;
+	if ('transition' in document.documentElement.style) {
+		ss.insertRule('.random{transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else if ('webkitTransition' in document.documentElement.style) {
+		ss.insertRule('.random{-webkit-transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else if ('mozTransition' in document.documentElement.style) {
+		ss.insertRule('.random{-moz-transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else {
+		console.log('):');
+		return;
+	}
+
 	playarea = document.getElementById('playarea');
 	likelike = document.getElementById('likelike');
 	pointer = document.getElementById('pointer');
@@ -36,14 +55,21 @@ function init() {
 }
 
 function over(e) {
-	if (e.target == playarea) pointer.style.visibility = 'visible';
+	if (e.target != playarea) return;
+	if (e.relatedTarget != null &&
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY) &&
+	    e.relatedTarget != likelike) return;
+	pointer.style.visibility = 'visible';
+	distractInterval = setInterval(distract, 100);
 }
 
 function out(e) {
 	if (e.target != playarea) return;
-	var comp = playarea.compareDocumentPosition(e.relatedTarget);
-	if (comp & playarea.DOCUMENT_POSITION_CONTAINED_BY) return;
+	if (e.relatedTarget != null &&
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY) &&
+	    e.relatedTarget != likelike) return;
 	pointer.style.visibility = '';
+	clearInterval(distractInterval);
 }
 
 function move(e) {
@@ -85,6 +111,21 @@ function up(e) {
 		playarea.style.backgroundColor = '';
 		playarea.style.cursor = '';
 	}
+}
+
+function distract() {
+	var img = document.createElement('img');
+	img.className = 'random';
+	img.src = 'http://i.imgur.com/EWmYMN2.png';
+	img.style.top = Math.random() * 480 + 'px';
+	img.style.left = Math.random() * 640 + 'px';
+	playarea.appendChild(img);
+	var dummy = img.clientHeight;
+	img.style.top = Math.random() * 480 + 'px';
+	img.style.left = Math.random() * 640 + 'px';
+	setTimeout(function () {
+		playarea.removeChild(img);
+	}, RANDOM_MOVE_TIME);
 }
 </script>
 <body>
