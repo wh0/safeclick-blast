@@ -5,8 +5,8 @@ html{min-height:100%;line-height:16px;font-size:13px;font-family:sans-serif;colo
 #decoy{position:absolute;top:232px;right:424px;margin:0;text-align:right;z-index:2;}
 #decoy a{cursor:inherit;}
 #likelike{position:absolute;top:228px;left:297px;z-index:2;}
-#pointer{position:fixed;visibility:hidden;pointer-events:none;}
-.random{position:absolute;z-index:1;}
+#pointer{position:fixed;visibility:hidden;pointer-events:none;z-index:3;}
+.random{position:absolute;pointer-events:none;z-index:1;}
 </style>
 <style>/* this one is populated by javascript */</style>
 <script>
@@ -22,6 +22,7 @@ var playarea = null;
 var likelike = null;
 var pointer = null;
 var distractInterval = null;
+var traceEvents = false;
 var ox, oy;
 
 function init() {
@@ -46,7 +47,6 @@ function init() {
 	playarea.addEventListener('mousemove', move);
 	playarea.addEventListener('mouseover', over);
 	playarea.addEventListener('mouseout', out);
-	likelike.addEventListener('mouseover', likeover);
 	window.addEventListener('resize', resize);
 	resize(null);
 
@@ -55,19 +55,21 @@ function init() {
 }
 
 function over(e) {
+	if (traceEvents) console.log('over', e.target, e.relatedTarget);
 	if (e.target != playarea) return;
 	if (e.relatedTarget != null &&
-	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY) &&
-	    e.relatedTarget != likelike) return;
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
+	console.info('pointer visible'); // %%%
 	pointer.style.visibility = 'visible';
 	distractInterval = setInterval(distract, 100);
 }
 
 function out(e) {
+	if (traceEvents) console.log('out', e.target, e.relatedTarget);
 	if (e.target != playarea) return;
 	if (e.relatedTarget != null &&
-	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY) &&
-	    e.relatedTarget != likelike) return;
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
+	console.info('pointer hidden'); // %%%
 	pointer.style.visibility = '';
 	clearInterval(distractInterval);
 }
@@ -95,12 +97,9 @@ function resize(e) {
 	oy = playarea.offsetTop + playarea.offsetHeight / 2;
 }
 
-function likeover(e) {
-	pointer.style.visibility = '';
-}
-
 function down(e) {
 	if (e.shiftKey) {
+		traceEvents = true;
 		playarea.style.backgroundColor = '#f0f0f0';
 		playarea.style.cursor = 'crosshair';
 	}
@@ -108,6 +107,7 @@ function down(e) {
 
 function up(e) {
 	if (!e.shiftKey) {
+		traceEvents = false;
 		playarea.style.backgroundColor = '';
 		playarea.style.cursor = '';
 	}
