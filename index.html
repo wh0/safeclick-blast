@@ -19,13 +19,16 @@ html{background:black;font-family:sans-serif;color:white;}
 <style>/* this one is populated by javascript */</style>
 <script>
 var
-ASTEROID_SPAWN_DELAY = 500, // time between mineral click and asteroid spawn
+ASTEROID_SPAWN_DELAY = 0, // time between mineral click and asteroid spawn
 ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
 
 SPAWN_TOP = 80, // area where objects can normally spawn, in pixels
 SPAWN_BOTTOM = 480 - 80,
 SPAWN_LEFT = 80,
 SPAWN_RIGHT = 640 - 80,
+
+ARROW_NUM_TURNS = 4,
+ARROW_SPIN_TIME = 3000,
 
 SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
 SCORE_DX = 8, // movement of +x score text
@@ -233,21 +236,21 @@ function test(success) {
 		displacement = randomDirection(MINERAL_DISPLACEMENT);
 	}
 
-	var h = hint(asteroidCoords, displacement);
+	var h = hint(asteroidCoords, Math.atan2(displacement.y, displacement.x));
 	asteroid(asteroidCoords.x, asteroidCoords.y, h);
 }
 
-function hint(origin, vector) {
-	var c = vector.x / MINERAL_DISPLACEMENT;
-	var s = vector.y / MINERAL_DISPLACEMENT;
-	var mat = [c, s, -s, c, 0, 0];
+function hint(origin, direction) {
 	var div = document.createElement('div');
 	div.className = 'hint';
 	div.style.top = origin.y + 'px';
 	div.style.left = origin.x + 'px';
-	div.style[transformName] = 'translate(-50%,-50%) matrix(' + mat.join(',') + ') translate(40px,0)';
+	div.style[transformName] = 'translate(-50%,-50%) rotate(-' + ARROW_NUM_TURNS + 'turn) translate(40px,0)';
+	div.style[transitionDurationName] = ARROW_SPIN_TIME + 'ms';
 	div.textContent = '>>>';
 	playarea.appendChild(div);
+	var dummy = div.clientHeight;
+	div.style[transformName] = 'translate(-50%,-50%) rotate(' + direction + 'rad) translate(40px,0)';
 	return div;
 }
 
@@ -256,7 +259,7 @@ function asteroid(x, y, other) {
 	div.className = 'asteroid';
 	div.style.top = y + 'px';
 	div.style.left = x + 'px';
-	div.addEventListener('click', function (e) {
+	setTimeout(function () {
 		if (div.className == 'dead') return;
 		div.className = 'dead';
 		if (other) playarea.removeChild(other);
@@ -265,17 +268,15 @@ function asteroid(x, y, other) {
 			playarea.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
 		mineral(x, y, displacement.x, displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
-		number(x, y, '+1');
-		addScore(1);
-	});
+	}, ARROW_SPIN_TIME);
 	playarea.appendChild(div);
 }
 
 function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	var div = document.createElement('div');
 	div.className = 'mineral';
-	div.style.top = y + 'px';
-	div.style.left = x + 'px';
+	div.style.top = y + 0.2 * dy + 'px';
+	div.style.left = x + 0.2 * dx + 'px';
 	div.style[transitionDurationName] = displacementDuration + 'ms,' + displacementDuration + 'ms,' + fadeDuration + 'ms';
 	var tFade = setTimeout(function () {
 		div.style.opacity = '0';
