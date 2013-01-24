@@ -1,6 +1,6 @@
 <!doctype html>
 <style>
-html{background:black;font-family:sans-serif;color:white;}
+html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
 #playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
 #likelike{position:absolute;visibility:hidden;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
@@ -37,7 +37,7 @@ SCORE_DY = 0,
 OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
 
 MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
-MINERAL_START_SPEED = 200 / 60 * 1000, // the first mineral takes this long to displace, in ms
+MINERAL_START_SPEED = 30 / 60 * 1000, // the first mineral takes this long to displace, in ms
 MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
 MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
 MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
@@ -46,7 +46,8 @@ SERVER_MOVE_TIME = 1000,
 SERVER_MIN_RADIUS = MINERAL_DISPLACEMENT * 0.8,
 SERVER_MAX_RADIUS = MINERAL_DISPLACEMENT * 1.2,
 
-NUM_SERVERS = 12,
+NUM_SERVERS = 24,
+NUM_SERVERS_RING = 12,
 SERVER_LIGHT_INTERVAL = 1500 / NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
 SERVER_TEXT_INTERVAL = 5000 / NUM_SERVERS, // every (this many) milliseconds, set a random server's text to a random value
 SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
@@ -128,10 +129,18 @@ function init() {
 	asteroidCoords = randomCoords();
 
 	// add servers
-	for (var i = 0; i < NUM_SERVERS; i++) {
+	var i = 0;
+	for (; i < NUM_SERVERS_RING; i++) {
 		var c = randomServerPosition();
 		serverCoords.push(c);
 		var s = server(c.x, c.y);
+		serverDivs.push(s);
+		s.textContent = Math.floor(10 / Math.random()) + ' requests pending.';
+	}
+	for (; i < NUM_SERVERS; i++) {
+		c = randomCoords();
+		serverCoords.push(c);
+		s = server(c.x, c.y);
 		serverDivs.push(s);
 		s.textContent = Math.floor(10 / Math.random()) + ' requests pending.';
 	}
@@ -215,7 +224,7 @@ function test(success) {
 	}
 
 	if (attempts == ASTEROIDS_BEFORE_ATTACK || failures == FAILURES_BEFORE_ATTACK) {
-		var si = Math.floor(Math.random() * NUM_SERVERS);
+		var si = Math.floor(Math.random() * NUM_SERVERS_RING);
 		var p = serverCoords[si];
 		covered = serverDivs[si];
 		// place the target
