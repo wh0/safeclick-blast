@@ -109,6 +109,17 @@ function init() {
 
 	// start game
 	step();
+
+	setTimeout(finish, 300000);
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish();
+		}
+	});
+}
+
+function finish() {
+	location.href = 'http://127.0.0.1:9988/finished.html';
 }
 
 function serverLights() {
@@ -257,6 +268,6 @@ function addScore(delta) {
 <p>Protect your space datacenter by blasting the asteroids.</p>
 <p>Get bonus points for grabbing minerals before they disintegrate.</p>
 <p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
-<iframe id="likelike"    src="//www.facebook.com/plugins/like.php?href=http%3A%2F%2Fhtmlpad.org%2F&amp;send=false&amp;layout=standard&amp;width=450&amp;show_faces=false&amp;font&amp;colorscheme=dark&amp;action=like&amp;height=35"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+<iframe id="likelike"    src="http://bl.ocks.org/d/2806b518afc9ded32cc3/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
 <div id="blink"></div>
 <script>init();</script>
