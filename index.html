@@ -29,6 +29,7 @@ SPAWN_RIGHT = 640 - 80,
 
 ARROW_NUM_TURNS = 4,
 ARROW_SPIN_TIME = 3000,
+ATTACK_LINGER = 1000, // target stays visible for this long after mineral is clicked (or disappears)
 
 SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
 SCORE_DX = 8, // movement of +x score text
@@ -292,22 +293,14 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	}, displacementDuration - fadeDuration);
 	var tRemove = setTimeout(function () {
 		playarea.removeChild(div);
-		if (covered) {
-			likelike.style.visibility = '';
-			covered.style.visibility = '';
-			covered = null;
-		}
+		if (covered) scheduleHideTarget();
 		test(false);
 	}, displacementDuration);
 	div.addEventListener('mousedown', function (e) {
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
 		playarea.removeChild(div);
-		if (covered) {
-			likelike.style.visibility = '';
-			covered.style.visibility = '';
-			covered = null;
-		}
+		if (covered) scheduleHideTarget();
 		var cx = e.clientX - playarea.offsetLeft;
 		var cy = e.clientY - playarea.offsetTop;
 		number(cx, cy, '+3');
@@ -320,6 +313,14 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	var dummy = div.clientHeight; // flush initialization
 	div.style.top = y + dy + 'px';
 	div.style.left = x + dx + 'px';
+}
+
+function scheduleHideTarget() {
+	setTimeout(function () {
+		likelike.style.visibility = '';
+		covered.style.visibility = '';
+		covered = null;
+	}, ATTACK_LINGER);
 }
 
 function number(x, y, text) {
