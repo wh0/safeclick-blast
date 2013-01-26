@@ -1,0 +1,68 @@
+<!doctype html>
+<h2>
+
+Thanks for playing.
+
+</h2>
+<p>
+
+You may have notice that there was a "Like" button hidden in our game.
+This was not a real Facebook Like button.
+If you clicked it, you did <em>not</em> actually "like" anything on your Facebook account.
+
+</p>
+<p id="attackSuccess" style="display:none;">
+
+The game has ended early because you clicked our fake Like button.
+You will still receive <em>full payment</em> for this task.
+
+</p>
+<p id="attackFail" style="display:none;">
+
+The game simply ends after a fixed amount of time.
+Thank you for helping test our game.
+
+</p>
+<p id="passwordDisplay"></p>
+<p id="returnPart" style="display:none;">
+
+The interactive portion of this task is over. You should now return to Mechanical Turk.
+
+</p>
+<script>
+var as = document.getElementById('attackSuccess');
+var af = document.getElementById('attackFail');
+var pd = document.getElementById('passwordDisplay');
+var rp = document.getElementById('returnPart');
+
+function generatePassword(h) {
+  pd.textContent = 'generating password...';
+  var x = new XMLHttpRequest();
+  x.open('POST', 'http://inst.eecs.berkeley.edu/~warrenhe/log/');
+  x.addEventListener('load', function (e) {
+    if (x.status == 200) {
+      pd.innerHTML = 'Use the password <strong>' + x.responseText + '</strong> to complete this interactive task.';
+    } else {
+      pd.innerHTML = 'There was a problem generating a password.';
+    }
+    rp.style.display = '';
+  });
+  x.send(h);
+}
+
+function problem() {
+  document.getElementsByTagName('h2')[0].textContent = 'Error';
+  document.getElementsByTagName('p')[0].textContent = 'This page should only be accessed from our game.';
+}
+
+function init() {
+  if (location.hash.length <= 1) return problem();
+  var h = location.hash.substr(1);
+  var o = JSON.parse(h);
+  if (o.liked) as.style.display = '';
+  else af.style.display = '';
+  generatePassword(h);
+}
+
+init();
+</script>

@@ -145,7 +145,7 @@ function init() {
 function finish(success) {
 	var h = '';
 	if (success) h = '#' + (Date.now() - gameStartTime);
-	location.href = 'http://bl.ocks.org/d/463a821151d8ee3f2ad1/' + h;
+	location.href = 'finished.html' + h;
 }
 
 function serverLights() {
