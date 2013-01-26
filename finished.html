@@ -36,33 +36,33 @@ var pd = document.getElementById('passwordDisplay');
 var rp = document.getElementById('returnPart');
 
 function generatePassword(h) {
-  pd.textContent = 'generating password...';
-  var x = new XMLHttpRequest();
-  x.open('POST', 'http://inst.eecs.berkeley.edu/~warrenhe/log/');
-  x.addEventListener('load', function (e) {
-    if (x.status == 200) {
-      pd.innerHTML = 'Use the password <strong>' + x.responseText + '</strong> to complete this interactive task.';
-    } else {
-      pd.innerHTML = 'There was a problem generating a password.';
-    }
-    rp.style.display = '';
-  });
-  x.send(h);
+	pd.textContent = 'generating password...';
+	var x = new XMLHttpRequest();
+	x.open('POST', 'http://inst.eecs.berkeley.edu/~warrenhe/log/');
+	x.addEventListener('load', function (e) {
+		if (x.status == 200) {
+			pd.innerHTML = 'Use the password <strong>' + x.responseText + '</strong> to complete this interactive task.';
+		} else {
+			pd.innerHTML = 'There was a problem generating a password.';
+		}
+		rp.style.display = '';
+	});
+	x.send(h);
 }
 
 function problem() {
-  document.getElementsByTagName('h2')[0].textContent = 'Error';
-  document.getElementsByTagName('p')[0].textContent = 'This page should only be accessed from our game.';
+	document.getElementsByTagName('h2')[0].textContent = 'Error';
+	document.getElementsByTagName('p')[0].textContent = 'This page should only be accessed from our game.';
 }
 
 function init() {
-  if (location.hash.length <= 1) return problem();
-  var h = location.hash.substr(1);
-  var o = JSON.parse(h);
-  if (o.liked) as.style.display = '';
-  else af.style.display = '';
-  location.replace('#');
-  generatePassword(h);
+	if (location.hash.length <= 1) return problem();
+	var h = location.hash.substr(1);
+	var o = JSON.parse(h);
+	if (o.liked) as.style.display = '';
+	else af.style.display = '';
+	location.replace('#');
+	generatePassword(h);
 }
 
 init();
