@@ -142,9 +142,10 @@ function init() {
 	});
 }
 
-function finish(success) {
-	var h = '';
-	if (success) h = '#' + (Date.now() - gameStartTime);
+function finish(liked) {
+	var o = {type: 'adaptation', liked: liked};
+	if (liked) o.time = Date.now() - gameStartTime;
+	var h = '#' + JSON.stringify(o);
 	location.href = 'finished.html' + h;
 }
 
