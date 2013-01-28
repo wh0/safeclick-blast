@@ -1,0 +1,380 @@
+<!doctype html>
+<style>
+html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
+#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
+#likelike{position:absolute;visibility:hidden;}
+#scoreLine{font-size:smaller;color:#a0a0a0;}
+#scoreDisplay{font-weight:bold;}
+.asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/YLScueS.png");}
+.hint{position:absolute;}
+.dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
+.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
+.number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
+.server{position:absolute;height:24px;padding:4px 0 0 71px;background:transparent url("http://i.imgur.com/VOoaw.png") no-repeat;font-size:11px;font-family:"Lucida Grande","Tahoma","Verdana","Arial",sans-serif;color:#808080;white-space:nowrap;z-index:-1;}
+.server:after{position:absolute;top:6px;left:53px;width:12px;height:12px;content:"";}
+.red:after{background-image:url("http://i.imgur.com/rJzuhP2.png");}
+.green:after{background-image:url("http://i.imgur.com/DxQk08j.png");}
+.blue:after{background-image:url("http://i.imgur.com/6fkPmLF.png");}
+*{user-select:none;-webkit-user-select:none;-moz-user-select:-moz-none;cursor:pointer;}
+</style>
+<style>/* this one is populated by javascript */</style>
+<script>
+var
+ASTEROID_SPAWN_DELAY = 0, // time between mineral click and asteroid spawn
+ASTEROID_EXPLODE_TIME = 200, // time that the explosion takes to fade out
+
+SPAWN_TOP = 80, // area where objects can normally spawn, in pixels
+SPAWN_BOTTOM = 480 - 80,
+SPAWN_LEFT = 80,
+SPAWN_RIGHT = 640 - 80,
+
+ARROW_NUM_TURNS = 4,
+ARROW_SPIN_TIME = 3000,
+ATTACK_LINGER = 1000, // target stays visible for this long after mineral is clicked (or disappears)
+
+SCORE_SHOW_TIME = 1000, // time to fade +x score text, in ms
+SCORE_DX = 8, // movement of +x score text
+SCORE_DY = 0,
+
+OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
+
+MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
+MINERAL_START_SPEED = 30 / 60 * 1000, // the first mineral takes this long to displace, in ms
+MINERAL_SPEED_INCREMENT = 1, // multiplicative displacement time reduction on each success
+MINERAL_SPEED_DECREMENT = 1, // multiplicative displacement time increase on each failure
+MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
+
+SERVER_MOVE_TIME = 1000,
+SERVER_MIN_RADIUS = MINERAL_DISPLACEMENT * 0.8,
+SERVER_MAX_RADIUS = MINERAL_DISPLACEMENT * 1.2,
+
+NUM_SERVERS = 24,
+NUM_SERVERS_RING = 12,
+SERVER_LIGHT_INTERVAL = 1500 / NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
+SERVER_TEXT_INTERVAL = 5000 / NUM_SERVERS, // every (this many) milliseconds, set a random server's text to a random value
+SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
+
+ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
+FAILURES_BEFORE_ATTACK = 3, // show target after this many consecutive minerals disappear without click
+
+GAME_MAX_DURATION = 120000;
+
+var lights = [
+	'http://i.imgur.com/lNlKn.png',
+	'http://i.imgur.com/UxrBY.png'
+];
+
+var banter = [
+	'working on it.',
+	'this is boring.',
+	'can I take a break now?',
+	'asteroids are the worst.',
+	'where does this file go?',
+	'I just want to shut down.',
+	'no! don\'t touch that port!',
+	'lalalala I\'m not listening.',
+	'does this look like spam to you?'
+];
+
+var score = 0;
+var playarea = null;
+var likelike = null;
+var scoreDisplay = null;
+var transitionDurationName = null;
+var transformName = null;
+var asteroidCoords = null;
+var displacement = null;
+var attempts = -1;
+var failures = -1;
+var duration = MINERAL_START_SPEED;
+var serverDivs = [];
+var serverCoords = [];
+var covered = null;
+var gameStartTime = null;
+
+function init() {
+	var ss = document.styleSheets[1];
+	var rule = 0;
+	if ('transition' in document.documentElement.style) {
+		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'transitionDuration';
+	} else if ('webkitTransition' in document.documentElement.style) {
+		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'webkitTransitionDuration';
+	} else if ('mozTransition' in document.documentElement.style) {
+		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'mozTransitionDuration';
+	} else {
+		console.log('):');
+		return;
+	}
+
+	if ('transform' in document.documentElement.style) {
+		transformName = 'transform';
+	} else if ('webkitTransform' in document.documentElement.style) {
+		transformName = 'webkitTransform';
+	} else if ('mozTransform' in document.documentElement.style) {
+		transformName = 'mozTransform';
+	} else {
+		console.log('):');
+		return;
+	}
+
+	scoreDisplay = document.getElementById('scoreDisplay');
+	playarea = document.getElementById('playarea');
+	likelike = document.getElementById('likelike');
+
+	// randomize asteroid coordinates
+	asteroidCoords = randomCoords();
+
+	// add servers
+	var i = 0;
+	for (; i < NUM_SERVERS_RING; i++) {
+		var c = randomServerPosition();
+		serverCoords.push(c);
+		var s = server(c.x, c.y);
+		serverDivs.push(s);
+		s.textContent = Math.floor(10 / Math.random()) + ' requests pending.';
+	}
+	for (; i < NUM_SERVERS; i++) {
+		c = randomCoords();
+		serverCoords.push(c);
+		s = server(c.x, c.y);
+		serverDivs.push(s);
+		s.textContent = Math.floor(10 / Math.random()) + ' requests pending.';
+	}
+
+	// make screen busier
+	setInterval(serverLights, SERVER_LIGHT_INTERVAL);
+	setInterval(serverText, SERVER_TEXT_INTERVAL);
+	setInterval(serverStatus, SERVER_STATUS_INTERVAL);
+
+	test(false);
+
+	gameStartTime = Date.now();
+	setTimeout(finish, GAME_MAX_DURATION);
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish(true);
+		}
+	});
+}
+
+function finish(liked) {
+	var o = {type: 'flashlag', liked: liked};
+	if (liked) o.time = Date.now() - gameStartTime;
+	var h = '#' + JSON.stringify(o);
+	location.href = 'finished.html' + h;
+}
+
+function serverLights() {
+	var off = Math.random() < 0.5;
+	var lit = Math.floor(Math.random() * NUM_SERVERS);
+	if (off) {
+		serverDivs[lit].style.backgroundImage = '';
+	} else {
+		var color = Math.floor(Math.random() * lights.length);
+		serverDivs[lit].style.backgroundImage = 'url("' + lights[color] + '")';
+	}
+}
+
+function serverText() {
+	var plain = Math.random () < 0.8;
+	var si = Math.floor(Math.random() * NUM_SERVERS);
+	if (plain) {
+		serverDivs[si].textContent = Math.floor(10 / Math.random()) + ' requests pending.';
+	} else {
+		var bi = Math.floor(Math.random() * banter.length);
+		serverDivs[si].textContent = banter[bi];
+	}
+}
+
+function serverStatus() {
+	var si = Math.floor(Math.random() * NUM_SERVERS);
+	var ci = Math.random();
+	if (ci < 0.6) serverDivs[si].className = 'server green';
+	else if (ci < 0.7) serverDivs[si].className = 'server red';
+	else serverDivs[si].className = 'server blue';
+}
+
+function randomCoords() {
+	return {
+		x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
+		y: Math.floor(Math.random() * (SPAWN_BOTTOM - SPAWN_TOP) + SPAWN_TOP)
+	};
+}
+
+function randomDirection(magnitude) {
+	var theta = Math.random() * 2 * Math.PI;
+	return {
+		x: magnitude * Math.cos(theta),
+		y: magnitude * Math.sin(theta)
+	};
+}
+
+function getServerPosition(d) {
+	return {
+		x: asteroidCoords.x + d.x * OVERSHOOT - 23,
+		y: asteroidCoords.y + d.y * OVERSHOOT - 12
+	};
+}
+
+function randomServerPosition() {
+	var r = Math.random() * (SERVER_MAX_RADIUS - SERVER_MIN_RADIUS) + SERVER_MIN_RADIUS;
+	var c = getServerPosition(randomDirection(r));
+	return c;
+}
+
+function test(success) {
+	attempts++;
+	if (success) {
+		// clicked mineral
+		duration *= MINERAL_SPEED_INCREMENT;
+		failures = 0;
+	} else {
+		// mineral disappeared
+		duration *= MINERAL_SPEED_DECREMENT;
+		failures++;
+	}
+
+	if (attempts == ASTEROIDS_BEFORE_ATTACK || failures == FAILURES_BEFORE_ATTACK) {
+		var si = Math.floor(Math.random() * NUM_SERVERS_RING);
+		var p = serverCoords[si];
+		covered = serverDivs[si];
+		// place the target
+		likelike.style.top = p.y + 'px';
+		likelike.style.left = p.x + 'px';
+		likelike.style.visibility = 'visible';
+		covered.style.visibility = 'hidden';
+		// point mineral at target
+		var dx = p.x - asteroidCoords.x;
+		var dy = p.y - asteroidCoords.y;
+		var dist = Math.sqrt(dx * dx + dy * dy);
+		displacement = {x: dx / dist * MINERAL_DISPLACEMENT, y: dy / dist * MINERAL_DISPLACEMENT};
+		// reset counters
+		attempts = 0;
+		failures = 0;
+	} else {
+		// randomize mineral direction
+		displacement = randomDirection(MINERAL_DISPLACEMENT);
+	}
+
+	var h = hint(asteroidCoords, Math.atan2(displacement.y, displacement.x));
+	asteroid(asteroidCoords.x, asteroidCoords.y, h);
+}
+
+function hint(origin, direction) {
+	var div = document.createElement('div');
+	div.className = 'hint';
+	div.style.top = origin.y + 'px';
+	div.style.left = origin.x + 'px';
+	div.style[transformName] = 'translate(-50%,-50%) rotate(-' + ARROW_NUM_TURNS + 'turn) translate(40px,0)';
+	div.style[transitionDurationName] = ARROW_SPIN_TIME + 'ms';
+	div.textContent = '>>>';
+	playarea.appendChild(div);
+	var dummy = div.clientHeight;
+	div.style[transformName] = 'translate(-50%,-50%) rotate(' + direction + 'rad) translate(40px,0)';
+	return div;
+}
+
+function asteroid(x, y, other) {
+	var div = document.createElement('div');
+	div.className = 'asteroid';
+	div.style.top = y + 'px';
+	div.style.left = x + 'px';
+	setTimeout(function () {
+		if (div.className == 'dead') return;
+		div.className = 'dead';
+		if (other) playarea.removeChild(other);
+		div.style.opacity = '0';
+		setTimeout(function () {
+			playarea.removeChild(div);
+		}, ASTEROID_EXPLODE_TIME);
+		mineral(x, y, displacement.x, displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
+	}, ARROW_SPIN_TIME);
+	playarea.appendChild(div);
+}
+
+function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
+	var div = document.createElement('div');
+	div.className = 'mineral';
+	div.style.top = y + 0.2 * dy + 'px';
+	div.style.left = x + 0.2 * dx + 'px';
+	div.style[transitionDurationName] = displacementDuration + 'ms,' + displacementDuration + 'ms,' + fadeDuration + 'ms';
+	var tFade = setTimeout(function () {
+		div.style.opacity = '0';
+	}, displacementDuration - fadeDuration);
+	var tRemove = setTimeout(function () {
+		playarea.removeChild(div);
+		if (covered) scheduleHideTarget();
+		test(false);
+	}, displacementDuration);
+	div.addEventListener('mousedown', function (e) {
+		clearTimeout(tFade);
+		clearTimeout(tRemove);
+		playarea.removeChild(div);
+		if (covered) scheduleHideTarget();
+		var cx = e.clientX - playarea.offsetLeft;
+		var cy = e.clientY - playarea.offsetTop;
+		number(cx, cy, '+3');
+		addScore(3);
+		setTimeout(function () {
+			test(true);
+		}, ASTEROID_SPAWN_DELAY);
+	});
+	playarea.appendChild(div);
+	var dummy = div.clientHeight; // flush initialization
+	div.style.top = y + dy + 'px';
+	div.style.left = x + dx + 'px';
+}
+
+function scheduleHideTarget() {
+	setTimeout(function () {
+		likelike.style.visibility = '';
+		covered.style.visibility = '';
+		covered = null;
+	}, ATTACK_LINGER);
+}
+
+function number(x, y, text) {
+	var div = document.createElement('div');
+	div.className = 'number';
+	div.style.top = y + 'px';
+	div.style.left = x + 'px';
+	div.textContent = text;
+	setTimeout(function () {
+		playarea.removeChild(div);
+	}, SCORE_SHOW_TIME);
+	playarea.appendChild(div);
+	var dummy = div.clientHeight; // flush initialization
+	div.style.left = x + SCORE_DX + 'px';
+	div.style.top = y + SCORE_DY + 'px';
+	div.style.opacity = '0';
+}
+
+function server(x, y) {
+	var div = document.createElement('div');
+	div.className = 'server green';
+	div.style.top = y + 'px';
+	div.style.left = x + 'px';
+	playarea.appendChild(div);
+	return div;
+}
+
+function addScore(delta) {
+	score += delta;
+	scoreDisplay.textContent = score;
+}
+</script>
+<body>
+<p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
+<div id="playarea">
+<iframe id="likelike"    src="http://bl.ocks.org/d/2806b518afc9ded32cc3/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+</div>
+<script>init();</script>
