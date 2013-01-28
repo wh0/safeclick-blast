@@ -217,6 +217,11 @@ function start() {
 
 	step();
 }
+
+// prevent page reuse
+window.onunload = function () {
+	var dummy = 'no-reuse';
+};
 </script>
 <body>
 <div id="field">
