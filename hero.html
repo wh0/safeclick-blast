@@ -73,6 +73,7 @@ var likelike;
 var fake;
 var sensor;
 var receiver;
+var finish;
 
 function getTransitionPrefix() {
 	var s = document.documentElement.style;
@@ -112,6 +113,12 @@ function init() {
 	});
 
 	sensor.addEventListener('mouseover', handleEnter);
+
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish(true);
+		}
+	});
 }
 
 function handleEnter(e) {
@@ -191,11 +198,7 @@ function start() {
 
 	function step() {
 		if (index >= MOVES.length) {
-			setTimeout(function () {
-				if (confirm('game over. your score was ' + s +'. play again?')) {
-					location.reload();
-				}
-			}, TARGET_DELAY);
+			setTimeout(finish, TARGET_DELAY);
 			return;
 		}
 		var now = Date.now() - startTime;
@@ -204,6 +207,13 @@ function start() {
 		index++;
 		setTimeout(step, Math.max(0, total * SPEED - now));
 	}
+
+	finish = function (liked) {
+		var o = {type: 'hero', liked: liked};
+		if (liked) o.time = Date.now() - startTime;
+		var h = '#' + JSON.stringify(o);
+		location.href = 'finished.html' + h;
+	};
 
 	step();
 }
