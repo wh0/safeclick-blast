@@ -172,7 +172,6 @@ function start() {
 				if (!sense[e.button]) return;
 				var time = Date.now() - startTime;
 				var distance = time - target;
-				console.log(distance); // %%%
 				addScore(1);
 				sense[e.button].style.opacity = '0.1';
 				delete sense[e.button];
