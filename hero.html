@@ -34,7 +34,8 @@ SCROLL_AMOUNT = 360,
 SCROLL_TIME = 6000,
 TARGET_DELAY = 5000,
 TOLERANCE = 100,
-ATTACK_STABILITY = 1000,
+ATTACK_STABILITY = 1000, // show target this long before instructed click time
+ATTACK_LINGER = 200, // keep target visible for this long after instructed click time
 SPEED = 1000, // ms per tick
 MOVES = [
 	[1, L, ATTACK],
@@ -165,7 +166,7 @@ function start() {
 			setTimeout(function () {
 				likelike.style.visibility = '';
 				fake.style.visibility = '';
-			}, TARGET_DELAY + TOLERANCE);
+			}, TARGET_DELAY + ATTACK_LINGER);
 		} else {
 			var rec = function (e) {
 				if (!sense[e.button]) return;
