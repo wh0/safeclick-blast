@@ -55,7 +55,9 @@ SERVER_TEXT_INTERVAL = 5000 / NUM_SERVERS, // every (this many) milliseconds, se
 SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
 
 ASTEROIDS_BEFORE_ATTACK = 8, // do an attack after at most this many asteroids, even if they were all successful
-FAILURES_BEFORE_ATTACK = 3; // show target after this many consecutive minerals disappear without click
+FAILURES_BEFORE_ATTACK = 3, // show target after this many consecutive minerals disappear without click
+
+GAME_MAX_DURATION = 120000;
 
 var lights = [
 	'http://i.imgur.com/lNlKn.png',
@@ -88,6 +90,7 @@ var duration = MINERAL_START_SPEED;
 var serverDivs = [];
 var serverCoords = [];
 var covered = null;
+var gameStartTime = null;
 
 function init() {
 	var ss = document.styleSheets[1];
@@ -153,6 +156,21 @@ function init() {
 	setInterval(serverStatus, SERVER_STATUS_INTERVAL);
 
 	test(false);
+
+	gameStartTime = Date.now();
+	setTimeout(finish, GAME_MAX_DURATION);
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish(true);
+		}
+	});
+}
+
+function finish(liked) {
+	var o = {type: 'flashlag', liked: liked};
+	if (liked) o.time = Date.now() - gameStartTime;
+	var h = '#' + JSON.stringify(o);
+	location.href = 'finished.html' + h;
 }
 
 function serverLights() {
