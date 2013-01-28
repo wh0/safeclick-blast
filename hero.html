@@ -106,7 +106,6 @@ function init() {
 		e.preventDefault();
 		var indicator = document.getElementById('indicator_' + e.button);
 		if (indicator) indicator.style.visibility = '';
-		if (receiver) receiver(e);
 	});
 	sensor.addEventListener('contextmenu', function (e) {
 		e.preventDefault();
