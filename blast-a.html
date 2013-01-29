@@ -53,6 +53,7 @@ SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
 MIN_ADAPTATION = 3,
 MAX_ADAPTATION = 8,
 ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
+ATTACK_SPAWN_MARGIN = 100, // min distance between random asteroid spawn and target
 
 BLINK_DURATION = 100, // how long the distraction is visible
 BLINK_CLICK_ASTEROID = 'yes',
@@ -186,6 +187,7 @@ function step() {
 		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
 	} else if (remaining > ASTEROIDS_BEFORE_SWITCH) {
 		likelike.style.visibility = '';
+		likeCoords = null;
 		if (coveredServer) {
 			coveredServer.className = 'server';
 			coveredServer = null;
@@ -208,6 +210,12 @@ function step() {
 	// %%% document.title = remaining;
 }
 
+function sqDist(u, v) {
+	var dx = u.x - v.x;
+	var dy = u.y - v.y;
+	return dx * dx + dy * dy;
+}
+
 function randomCoords() {
 	return {
 		x: Math.floor(Math.random() * (SPAWN_RIGHT - SPAWN_LEFT) + SPAWN_LEFT),
@@ -217,6 +225,11 @@ function randomCoords() {
 
 function randomAsteroid() {
 	var c = randomCoords();
+	if (likeCoords) {
+		while (sqDist(c, likeCoords) < ATTACK_SPAWN_MARGIN * ATTACK_SPAWN_MARGIN) {
+			c = randomCoords();
+		}
+	}
 	asteroid(c.x, c.y, MINERAL_DX, MINERAL_DY);
 }
 
