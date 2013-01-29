@@ -60,6 +60,18 @@ function init() {
 
 	addEventListener('keydown', down);
 	addEventListener('keyup', up);
+
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish(true);
+		}
+	});
+}
+
+function finish(liked) {
+	var o = {type: 'crooked', liked: liked};
+	var h = '#' + JSON.stringify(o);
+	location.href = 'finished.html' + h;
 }
 
 function over(e) {
@@ -183,7 +195,7 @@ function animateLastMile() {
 </script>
 <body>
 <div id="playarea">
-	<p id="decoy">feel free to click <a href="/">here</a></p>
+	<p id="decoy">feel free to click <a href="/" onclick="finish(); return false">here</a></p>
 	<iframe id="likelike"    src="http://bl.ocks.org/d/ea274ec62f0c248144e5/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
 	<img id="pointer" src="http://i.imgur.com/EWmYMN2.png">
 </div>
