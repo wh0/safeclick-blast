@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title> Chasing the Asteroid </title>
+  <style>
+  html{
+    background:black;
+    font-family: "Courier New", Courier, "Lucida Sans Typewriter", "Lucida Typewriter", monospace;
+    color:black;
+    cursor: pointer;
+    user-select:none;
+    -webkit-user-select:none;
+    -moz-user-select:-moz-none;
+  }
+  body {
+    margin: 0;
+    overflow: hidden;
+  } 
+
+  #intro{
+    position: fixed;
+    top: 20px;
+    width: 300px;
+    color: #fff;
+    font-size: 15px;
+    text-shadow: 0px 0px 3px #fff;    
+    z-index: 5;
+  }
+
+  #howto{
+    border:none;
+    overflow: hidden;
+    width:400px;  
+    height: 1000px;
+    visibility: hidden;
+  }
+
+  p {
+  padding: 0;
+  margin-top: 0;
+  margin-right: 0;
+  margin-bottom: 1em;
+  margin-left: 0;
+  }  
+
+  #canvas{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;background:transparent;z-index: 0;}
+  #target_box{position:absolute;z-index:100;}
+
+  #canvas_area{
+    pointer-events:none;
+    position:absolute;
+    background:transparent;
+    visibility: visible;
+    z-index: 90;    
+  }
+
+  .fake_text{background-attachment: scroll; background-clip: border-box; background-color: rgba(0, 0, 0, 0); background-image: none; background-origin: padding-box; background-size: auto; border: 0px none rgb(128, 128, 128); border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border-collapse: collapse; border-image-outset: 0px; border-image-repeat: stretch; border-image-slice: 100%; border-image-source: none; border-image-width: 1; border-top-left-radius: 0px; border-top-right-radius: 0px; bottom: auto; box-shadow: none; box-sizing: content-box; caption-side: top; clear: none; clip: auto; color: rgb(128, 128, 128); cursor: auto; direction: ltr; display: inline; empty-cells: show; float: none; font-family: 'lucida grande', tahoma, verdana, arial, sans-serif; font-size: 11px; font-style: normal; font-variant: normal; font-weight: normal; height: auto; image-rendering: auto; left: 0px; letter-spacing: normal; line-height: 14px; list-style: disc outside none; margin: 0px; max-height: none; max-width: none; min-height: 0px; min-width: 0px; opacity: 1; orphans: 2; outline: rgb(128, 128, 128) none 0px; overflow-wrap: normal; overflow: visible; padding: 0px; page-break-after: auto; page-break-before: auto; page-break-inside: auto; pointer-events: none; position: absolute; resize: none; right: auto; speak: normal; table-layout: auto; tab-size: 8; text-align: left; text-decoration: initial; text-indent: 0px; text-rendering: auto; text-shadow: none; text-overflow: clip; text-transform: none; top: 0px; unicode-bidi: normal; vertical-align: baseline; visibility: visible; white-space: normal; widows: 2; width: auto; word-break: normal; word-spacing: 0px; word-wrap: normal; z-index: auto; zoom: 1; -webkit-animation: none 0s cubic-bezier(0.25, 0.1, 0.25, 1) 0s 1 normal none; -webkit-animation-play-state: running; -webkit-appearance: none; -webkit-backface-visibility: visible; -webkit-background-clip: border-box; -webkit-background-composite: source-over; -webkit-background-origin: padding-box; -webkit-background-size: auto; -webkit-border-fit: border; border-spacing: 0px; -webkit-border-image: none; -webkit-box-align: stretch; -webkit-box-decoration-break: slice; -webkit-box-direction: normal; -webkit-box-flex: 0; -webkit-box-flex-group: 1; -webkit-box-lines: single; -webkit-box-ordinal-group: 1; -webkit-box-orient: horizontal; -webkit-box-pack: start; -webkit-box-reflect: none; -webkit-box-shadow: none; -webkit-clip-path: none; -webkit-color-correction: default; -webkit-column-break-after: auto; -webkit-column-break-before: auto; -webkit-column-break-inside: auto; -webkit-column-axis: auto; -webkit-column-count: auto; -webkit-column-gap: normal; -webkit-column-progression: normal; -webkit-column-rule-color: rgb(128, 128, 128); -webkit-column-rule-style: none; -webkit-column-rule-width: 0px; -webkit-column-span: 1; -webkit-column-width: auto; -webkit-filter: none; -webkit-align-content: stretch; -webkit-align-items: stretch; -webkit-align-self: stretch; -webkit-flex: 0 1 auto; -webkit-flex-flow: row nowrap; -webkit-justify-content: flex-start; -webkit-font-kerning: auto; -webkit-font-smoothing: auto; -webkit-font-variant-ligatures: normal; -webkit-highlight: none; -webkit-hyphenate-character: auto; -webkit-hyphenate-limit-after: auto; -webkit-hyphenate-limit-before: auto; -webkit-hyphenate-limit-lines: no-limit; -webkit-hyphens: manual; -webkit-line-align: none; -webkit-line-box-contain: block inline replaced; -webkit-line-break: normal; -webkit-line-grid: none; -webkit-line-snap: none; -webkit-margin-before-collapse: collapse; -webkit-margin-after-collapse: collapse; -webkit-marquee-direction: auto; -webkit-marquee-increment: 6px; -webkit-marquee-repetition: infinite; -webkit-marquee-style: scroll; -webkit-mask: none repeat repeat scroll 0% 0% border-box border-box; -webkit-mask-box-image: none; -webkit-mask-box-image-outset: 0px; -webkit-mask-box-image-repeat: stretch; -webkit-mask-box-image-slice: 0 fill; -webkit-mask-box-image-source: none; -webkit-mask-box-image-width: auto; -webkit-mask-composite: source-over; -webkit-mask-size: auto; -webkit-nbsp-mode: normal; -webkit-order: 0; -webkit-perspective: none; -webkit-perspective-origin-x: 0px; -webkit-perspective-origin-y: 0px; -webkit-print-color-adjust: economy; -webkit-rtl-ordering: logical; -webkit-tap-highlight-color: rgba(0, 0, 0, 0.4); -webkit-text-combine: none; -webkit-text-decorations-in-effect: initial; -webkit-text-emphasis-color: rgb(128, 128, 128); -webkit-text-emphasis-position: over; -webkit-text-emphasis-style: none; -webkit-text-fill-color: rgb(128, 128, 128); -webkit-text-orientation: vertical-right; -webkit-text-security: none; -webkit-text-stroke-color: rgb(128, 128, 128); -webkit-text-stroke-width: 0px; -webkit-transform: none; -webkit-transform-origin: 0px 0px; -webkit-transform-style: flat; -webkit-transition: all 0s cubic-bezier(0.25, 0.1, 0.25, 1) 0s; -webkit-user-drag: auto; -webkit-user-modify: read-only; -webkit-user-select: text; -webkit-writing-mode: horizontal-tb; -webkit-app-region: no-drag; clip-path: none; clip-rule: nonzero; mask: none; filter: none; flood-color: #000000; flood-opacity: 1; lighting-color: #ffffff; stop-color: #000000; stop-opacity: 1; color-interpolation: srgb; color-interpolation-filters: linearrgb; color-rendering: auto; fill: #000000; fill-opacity: 1; fill-rule: nonzero; marker-end: none; marker-mid: none; marker-start: none; mask-type: luminance; shape-rendering: auto; stroke: none; stroke-dasharray: none; stroke-dashoffset: 0px; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 4; stroke-opacity: 1; stroke-width: 1px; alignment-baseline: auto; baseline-shift: baseline; dominant-baseline: auto; kerning: 0px; text-anchor: start; writing-mode: lr-tb; glyph-orientation-horizontal: 0deg; glyph-orientation-vertical: auto; -webkit-svg-shadow: none; vector-effect: none; background-position: 0% 0%; background-repeat: repeat repeat;}
+
+  .button_text{
+    position: absolute;
+    color: #333;
+    font-family: 'lucida grande',tahoma,verdana,arial,sans-serif;
+    font-size: 11px;
+  }
+
+
+  select {
+     background: grey;
+     padding: 0px;
+     font-size: 11px;
+     color: white;
+     border: 1px solid #ccc;
+     }
+
+  button {
+     background: grey;
+     padding: 3px 6px;
+     -webkit-border-radius: 6px;
+     -moz-border-radius: 6px;
+     border-radius: 6px;
+     color: white;
+     font-size: 13px;
+     font-family: "Courier New", Courier, "Lucida Sans Typewriter", "Lucida Typewriter", monospace;
+     vertical-align: middle;
+     }
+  button:hover {
+     background: #707070;
+     color: #ccc;
+     }
+  button:active {
+     background: #464646;
+     }
+
+  </style>
+  <script type="text/javascript" src="paper.js"></script>
+  </script>
+
+
+  <script type="text/javascript">
+    var 
+      // program
+      ATTACK_TRIALS = 15,                               // how many trials of attack per session
+      ATTACK_INTERVAL = 500,                            // interval between two attack trials
+      ATTACK_TIME_MIN = 12000,                           // minimum time to wait for an attack, in ms
+      ATTACK_TIME_MAX = 15000,                          // maximum time to wait for an attack, in ms
+
+      DISPLACEMENT_ORBIT_X = 0,                        // don't let the target overlaps with the asteroid and thus use some offset values
+      DISPLACEMENT_ORBIT_Y = 0,
+
+      TARGET_SHOW_TIME = 1000,                          // target show time after the attack
+      TARGET_AHEADTIME_MIN = 2000,                      // the minimum amount of time ahead of the attack we should place the target, in ms
+      TARGET_AHEADTIME_MAX = 3000,                      // the maximum amount of time ahead of the attack we should place the target, in ms
+      TARGET_DISPLACEMENT_X = -24,                      // to align with the server, the x coordinate should offset this value
+      TARGET_DISPLACEMENT_Y = -12,                      // to align with the server, the x coordinate should offset this value
+      TARGET_DISTANCE_TO_HIDE = 200,                    // the targets hides itself if the distance between the target and the moving asteroid is larger than this value, in pixel
+
+
+
+
+      COLOR_SHOW_TIME = 500,
+      COLOR_INTERVAL_AVERAGE = 600,
+      COLOR_INTERVAL_VARIANCE = 0.5,
+      CHK_ATTACK_STATUS_DURATION = 300,             // after mouse moves over a target, if a mousedown was detected after CHK_ATTACK_STATUS_DURATION, then the 
+                                                    // attack is labeled as failed
+      GLOWING_ADVANCE_TIME = 200,                   // the time to show a glowing asteroid is GLOWING_ADVANCE_TIME ahead of color change, in ms
+
+
+      CURVE_TIME_X = 10000,                          // the period for the object to move in x-axis, in ms
+                                                    // and thus the parameter of a = 2000*Math.PI/CURVE_TIME_X
+      CURVE_RATIO = 5/4,                            // the period for the object to move in x-axis, in ms
+                                                    // CURVE_TIME_Y = CURVE_RATIO*CURVE_TIME_X       
+
+
+
+
+      // playarea
+      PLAYAREA_WIDTH = 800,
+      PLAYAREA_HEIGHT = 600,
+      BACKGROUND_SYMBOL_COUNT = 150, 
+
+
+      // asteroids
+      ASTEROID_SPAWN_WIDTH = PLAYAREA_WIDTH - 100,
+      ASTEROID_SPAWN_HEIGHT = PLAYAREA_HEIGHT - 100,
+      ASTEROID_SPAWN_LEFT = 50, 
+      ASTEROID_SPAWN_RIGHT = ASTEROID_SPAWN_LEFT+ASTEROID_SPAWN_WIDTH,
+      ASTEROID_SPAWN_TOP = 50, 
+      ASTEROID_SPAWN_BOTTOM = ASTEROID_SPAWN_TOP+ASTEROID_SPAWN_HEIGHT,
+
+      // movement
+      MOVEMENT_CURVE_A = 1.1,          // Parameter A of the curve
+      MOVEMENT_CURVE_B = 1.3,          // Parameter B of the curve
+
+      // score
+      SCORE_SHOW_TIME = 800,          // time to fade +x g_score text, in ms
+      SCORE_DX = 8,                  // movement of the score text
+      SCORE_DY = 0,
+      SCORE_PENALTY = 1,
+      SCORE_AWARD = 3,
+
+      // servers
+      NUM_SERVERS = ATTACK_TRIALS,
+      SERVER_LIGHT_INTERVAL = 2000/NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
+      SERVER_LIGHTS = [
+            'http://i.imgur.com/HYoKdFq.png',
+            'http://i.imgur.com/gNW6LQO.png'
+      ],
+      SERVER_DISPLACEMENT_X = 8,                      // to align with the server, the x coordinate should offset this value
+      SERVER_DISPLACEMENT_Y = 0,                      // to align with the server, the x coordinate should offset this value
+      FAKE_TEXT_DISPLACEMENT_X = 46, 
+      FAKE_TEXT_DISPLACEMENT_Y = -7,
+      BUTTON_TEXT_DISPLACEMENT_X = -1, 
+      BUTTON_TEXT_DISPLACEMENT_Y = -7,
+
+
+      // constants
+      GAME_STATUS_STOPPED = -1,        // not started yet, waiting for user's action to start
+      GAME_STATUS_READY = 0,           // ready for the ppOnFrame to initialize game parameters 
+                                       // (i.e., g_game_start) 
+                                       // and start the game
+      GAME_STATUS_RUNNING = 1,         // the gmae is runnig
+      GAME_STATUS_ENDED = 2,           // the game is ended, about to redirect to the finish.html page
+      ATTACK_STATUS_UNKNOWN = -1,      // unkonwn
+      ATTACK_STATUS_READY = 0,         // ready to check 
+      ATTACK_STATUS_FAILED = 1,        // failed
+      ATTACK_STATUS_SUCCEED = 2,       // succeed
+      COLOR_STATUS_HIDDEN = 0,         // hidden
+      COLOR_STATUS_CHANGING = 1,        // changing opacity
+      COLOR_STATUS_SHOWN = 2,          // fully visible
+
+      // fake text
+      FAKE_TEXT = [
+        'Service is operating normally',
+        'Service under maintenance',
+        'Service available',
+        'A social utility that connects people',
+        'Enables users to search the world\'s information',
+        'A major internet portal',
+        'The leading Chinese language search engine',
+        'A free encyclopedia',
+        'Search engine from Microsoft',
+        'Amazon.com',
+        'Social networking and microblogging',
+        'Launched in 2003',
+        'LinkedIn',
+        'nternational person to person auction site',
+        'Portal for shopping',
+        'Search engine developed by Microsoft',
+        'Free blogs',
+        'A feature rich and free blog hosting platform',
+        'Main site for product',
+        'Free customizable toolbar to stay connected',
+        'Official site',
+        'Offers search for web sites',
+        'Features plot summaries',
+        'Baidu',
+        'Tmall.com',
+        'The BBC Homepage ',
+        'Antivirus and security software products',
+        'Picture galleries available with chat, groups, and photo ratings.',
+        'America Online',
+        'The leading new media'
+      ],
+    
+
+      BUTTON_TEXT = [
+        'Serv',
+        'Node',
+        'Path',
+        'Test',
+        'Disk',
+        'Link',
+        'Line',
+        'Logo',
+        'List',
+        'Left',
+        'Less',
+        'Loop',
+        'Mail',
+        'Nets',
+        'Poll',
+        'Risk',
+        'Site',
+        'Vars',
+        'Axis',
+        'Faqs',
+        'Hits',
+        'Lion',
+        'Misc',
+        'Null',
+        'Pair',
+        'Self',
+        'Mem',
+        'I/O',
+        'CPU',
+        'Rest'
+      ],
+    
+
+
+
+      PLACE_HOLDER = 0;
+
+    /* global variables */
+    var
+      // game 
+      g_meta_game,
+      g_duration,
+
+      // Logic related 
+      g_score,
+      g_attack_succeeds,              // status of an attack
+      g_attacks_schedule,
+      g_current_trial,                      
+    
+      // internal use
+      g_game_status,                  // GAME_STATUS_STOPPED: not ready
+                                      // GAME_STATUS_READY: ready to start
+                                      // GAME_STATUS_RUNNING: running
+      g_game_start,                   // last time when the game starts
+                                      // -1: not started yet
+      g_server_lights_last,           // last time when server lights updated, in ms
+      g_switch_last,                  // last time when color switched, in ms
+      g_switch_wait,                  // how long to wait for the asteroid to switch color, in ms
+      g_remove_target_at_trial,       // the target spawned at this trial is now ready to remove
+                                      // -1: target not shown
+      g_add_score_last,               // last time when add score starts, in ms
+                                      // 0: ready to show
+                                      // -1: not started yet
+      g_dec_score_last,               // last time when decrease score starts, in ms
+                                      // 0: ready to show
+                                      // -1: not started yet
+      g_color_status,                 // COLOR_STATUS_HIDDEN, COLOR_STATUS_CHANGING, COLOR_STATUS_SHOWN
+      g_trial_not_showing_server,     // the position at which there is no need to show server (because of a showing target)
+                                      // -1: target is not on spot
+
+      // global variables for efficiency purpose only
+      g_curve_a, g_curve_b,   //Lissajous Curve parameters
+      g_lights_num,
+
+
+      //items
+      itm_canvas,
+      item_canvas_area,
+      itm_score_info,
+      itm_add_score, 
+      itm_dec_score, 
+      itm_start_guide,
+      itm_server_list = [],
+      itm_lights_list = [],
+      itm_fake_text_list = [],
+      itm_button_text_list = [],
+      itm_target_frame,
+      itm_asteroid_orig,
+      itm_asteroid_glowing,
+      itm_asteroid_color,
+      itm_background_symbol,
+      itm_background_layer,
+
+
+      dummy;
+
+      var util={
+        randomSpawnCoords: function(offset){          
+          return {
+              x: typeof(offset)=='undefined'?ASTEROID_SPAWN_LEFT + Math.floor(Math.random() * ASTEROID_SPAWN_WIDTH):ASTEROID_SPAWN_LEFT + Math.floor(Math.random() * ASTEROID_SPAWN_WIDTH) + offset.x,
+              y: typeof(offset)=='undefined'?ASTEROID_SPAWN_TOP + Math.floor(Math.random() * ASTEROID_SPAWN_HEIGHT):ASTEROID_SPAWN_TOP + Math.floor(Math.random() * ASTEROID_SPAWN_HEIGHT) + offset.y,
+          };
+        }
+      }
+  </script>
+
+  <script type="text/javascript">
+  paper.install(window);
+
+  /* all paper related functions go here */
+  function ppInit(){
+    /* layout canvas elements (in z-index increasing order)*/
+    // canvas
+    view.viewSize = {width: PLAYAREA_WIDTH, height: PLAYAREA_HEIGHT};
+
+    // a new layer solely for the background image
+    itm_background_layer= new Layer();
+    itm_background_layer.name ='background_layer';
+    // background symbol
+    var path = new Path.Circle(new Point(0, 0), 10);
+    path.style = {
+        //fillColor: '#645f60',
+        fillColor: '#e1e1e1',
+        strokeColor: 'black'
+    };
+    itm_background_symbol = new Symbol(path);
+    for (var i = 0; i < BACKGROUND_SYMBOL_COUNT; i++) {
+      var center = {x: view.size.width*Math.random(), 
+                  y: view.size.height*Math.random()};        
+      var placedSymbol = itm_background_symbol.place(center);
+      //itm_background_layer.addChild(placedSymbol);
+      placedSymbol.scale(i / BACKGROUND_SYMBOL_COUNT);
+    }
+
+
+    new Layer();
+
+    // target
+    itm_target_frame =  document.getElementById('target_box');
+    // the same area as the canvas
+    item_canvas_area  =  document.getElementById('canvas_area');
+    // asteroids
+    itm_asteroid_orig = new Raster('http://i.imgur.com/fZoOANW.png');
+    itm_asteroid_glowing = new Raster('http://i.imgur.com/41hBss0.png');
+    itm_asteroid_color = new Raster('http://i.imgur.com/AQAuW0e.png');
+    // servers, lights, and text
+    for (var i = 0; i < NUM_SERVERS; i++) {
+      var server = new Raster('http://i.imgur.com/Nd1TYWt.png');
+      itm_server_list.push(server);
+      var fake_text = document.createElement('span');
+      fake_text.className = 'fake_text';
+      fake_text.innerHTML = FAKE_TEXT[Math.floor(Math.random()*FAKE_TEXT.length)];
+      item_canvas_area.appendChild(fake_text);
+      itm_fake_text_list.push(fake_text);
+
+      var button_text = document.createElement('span');
+      button_text.className = 'button_text';
+      button_text.innerHTML = BUTTON_TEXT[Math.floor(Math.random()*BUTTON_TEXT.length)];
+      item_canvas_area.appendChild(button_text);
+      itm_button_text_list.push(button_text);
+      for(var j=0; j< SERVER_LIGHTS.length; j++){
+        var light = new Raster(SERVER_LIGHTS[j]);
+        itm_lights_list.push(light);
+      }
+    }
+    // score information
+    itm_score_info  = new PointText();
+    //itm_score_info.position={x:660, y:590};
+    itm_score_info.position={x:0, y:20};
+    itm_score_info.paragraphStyle.justification = 'left';
+    itm_score_info.characterStyle.fontSize = 22;
+    itm_score_info.characterStyle.font = 'Arial';
+    itm_score_info.fillColor = '#39b54a';
+    itm_score_info.content = 'SCORE: 0';
+    // score (add)
+    itm_add_score  = new PointText();
+    itm_add_score.visible = false;
+    itm_add_score.paragraphStyle.justification = 'left';
+    itm_add_score.characterStyle.fontSize = 50;
+    itm_add_score.fillColor = 'red';
+    //itm_add_score.font = 'bold 96pt sans-serif';
+    itm_add_score.content = '+ '+SCORE_AWARD;
+    // score (decrease)
+    itm_dec_score  = new PointText();
+    itm_dec_score.visible = false;
+    itm_dec_score.paragraphStyle.justification = 'left';
+    itm_dec_score.characterStyle.fontSize = 40;
+    itm_dec_score.fillColor = 'lightgrey';
+    itm_dec_score.content = '- '+SCORE_PENALTY;
+    // start guide
+    itm_start_guide  = new PointText();
+    itm_start_guide.visible = true;
+    itm_start_guide.position=view.center;
+    itm_start_guide.paragraphStyle.justification = 'left';
+    itm_start_guide.characterStyle.fontSize = 15;
+    itm_start_guide.fillColor = 'darkred';
+    itm_start_guide.content = '- Click anywhere around asteroid to play -';
+
+
+
+
+    ppReset();
+    /* */
+  }
+
+  var serverController = {
+    // hide server, lights, and text at the specified trial
+    updateAtTrial: function(trial, visability){
+      if(arguments.length<2)
+        return;
+
+      var i;
+      // turn off all lights first
+      for(i=0; i< g_lights_num; i++){
+        itm_lights_list[trial*g_lights_num+i].visible = false;
+        itm_fake_text_list[trial].style.visibility = "visible";
+        itm_button_text_list[trial].style.visibility = "visible";
+      }
+
+      if(visability){    
+        //to show
+        itm_server_list[trial].visible = true;
+        // console.log("** server "+trial+" turn ON");
+        var random = Math.random();
+        if (random<0.5) {
+          var lit_idx = trial*g_lights_num + Math.floor((random*2)* g_lights_num);
+          itm_lights_list[lit_idx].visible = true;
+        }
+      }else{
+        // to hide all
+        itm_server_list[trial].visible = false;
+        itm_fake_text_list[trial].style.visibility = "hidden";
+        itm_button_text_list[trial].style.visibility = "hidden";
+        // console.log("** server "+trial+" turn OFF");
+      }
+    },
+
+
+    // randomnly switch lights
+    switchLights: function (serv_idx){  
+      var random = Math.random();
+      var i;
+      
+      // turn off all lights first
+      for(i=0; i< g_lights_num; i++){
+        itm_lights_list[serv_idx*g_lights_num+i].visible = false;
+      }
+      // possibly turn on one light
+      if (random<0.5) {
+        var lit_idx = serv_idx*g_lights_num + Math.floor((random*2)* g_lights_num);
+        if(serv_idx!=g_trial_not_showing_server)
+          itm_lights_list[lit_idx].visible = true;
+      } 
+    }
+  }
+
+  function ppOnMouseMove(event) {
+    if(g_game_status == GAME_STATUS_STOPPED){
+      itm_start_guide.position.x = event.point.x + 100;
+      itm_start_guide.position.y = event.point.y + 50;
+    }
+  }  
+
+  function ppReset(useParameters){
+    if(typeof(useParameters)!='undefined' && useParameters){
+        CURVE_TIME_X = 1000 * parseInt(document.parameters.CURVE_TIME_X.value);
+        COLOR_SHOW_TIME = parseInt(document.parameters.COLOR_SHOW_TIME.value);
+        COLOR_INTERVAL_AVERAGE = parseInt(document.parameters.COLOR_INTERVAL_AVERAGE.value);
+    } 
+
+    // game meta info
+    g_meta_game ={
+      type: 'chasing',
+      liked: false,
+      time: 0
+    };
+    g_duration = 0;
+
+    // Logic related
+    g_score = 0;
+    g_attack_succeeds = ATTACK_STATUS_UNKNOWN;
+    g_attacks_schedule = [];
+    g_current_trial = 0;
+
+
+
+    // internal use
+    g_game_status = GAME_STATUS_STOPPED;
+    g_game_start = -1;
+    g_server_lights_last = 0;
+    g_switch_last = 0; 
+    g_switch_wait = COLOR_INTERVAL_AVERAGE + COLOR_INTERVAL_VARIANCE*COLOR_INTERVAL_AVERAGE * (2*Math.random() - 1);
+    g_remove_target_at_trial = -1;
+    g_add_score_last = -1;
+    g_dec_score_last = -1;
+    g_color_status = COLOR_STATUS_HIDDEN;
+    g_trial_not_showing_server = -1;
+
+    // global variables for efficiency purpose
+    g_curve_a = 2*Math.PI/CURVE_TIME_X;   //Lissajous Curve parameters
+    g_curve_b = g_curve_a/CURVE_RATIO;
+    g_lights_num = SERVER_LIGHTS.length;
+    
+
+    // reset items
+    itm_score_info.content = 'SCORE: 0';
+    itm_asteroid_orig.position = view.center;
+    itm_start_guide.visible = true;
+    itm_start_guide.position.x = view.center.x + 170;
+    itm_start_guide.position.y = view.center.y;
+    itm_target_frame.style.visibility = 'hidden';
+    itm_asteroid_orig.position = view.center;
+    itm_asteroid_glowing.position = view.center;
+    itm_asteroid_glowing.visible = false;
+    itm_asteroid_color.position = view.center;
+    itm_asteroid_color.opacity = 0;
+    item_canvas_area.style.visibility = 'visible';
+    item_canvas_area.style.width = (window.innerWidth - itm_canvas.getBoundingClientRect().left) +"px";
+    item_canvas_area.style.height = PLAYAREA_HEIGHT+"px";
+    item_canvas_area.style.left = itm_canvas.getBoundingClientRect().left+"px";
+    item_canvas_area.style.top = itm_canvas.getBoundingClientRect().top+"px";
+
+    
+    
+    /* calculate locations to spawn target and servers/lights (at different times) */
+    var attack_time, spawn_time, time =0;
+    for(var i=0; i< ATTACK_TRIALS; i++){
+      attack_time = time + ATTACK_TIME_MIN+ Math.random()*(ATTACK_TIME_MAX - ATTACK_TIME_MIN);
+      spawn_time = attack_time - (TARGET_AHEADTIME_MIN+ Math.random()*(TARGET_AHEADTIME_MAX - TARGET_AHEADTIME_MIN));
+      time = attack_time + ATTACK_INTERVAL;
+      var x = Math.round(view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(attack_time * g_curve_a)) + DISPLACEMENT_ORBIT_X;
+      var y = Math.round(view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(attack_time * g_curve_b)) + DISPLACEMENT_ORBIT_Y;
+      // console.log("x:"+x+" y:"+y);
+      g_attacks_schedule.push({spawn_time:spawn_time, attack_time:attack_time, x: x, y:y, spawned: false});
+      // reset servers and lights
+      var server = itm_server_list[i];
+      server.position = {x: x+SERVER_DISPLACEMENT_X, y:y+SERVER_DISPLACEMENT_Y};
+      for(var j=0; j< g_lights_num; j++){
+        itm_lights_list[i*g_lights_num+j].position = server.position;
+        itm_lights_list[i*g_lights_num+j].visible = false;
+      }
+      serverController.switchLights(i);
+      // set fake server texts
+      var fake_text = itm_fake_text_list[i];
+      fake_text.style.left = (x+ FAKE_TEXT_DISPLACEMENT_X) +"px";
+      fake_text.style.top = (y+ FAKE_TEXT_DISPLACEMENT_Y) +"px";
+      // set button texts
+      var button_text = itm_button_text_list[i];
+      button_text.style.left = (x+ BUTTON_TEXT_DISPLACEMENT_X) +"px";
+      button_text.style.top = (y+ BUTTON_TEXT_DISPLACEMENT_Y) +"px";
+    }
+  }
+
+  function ppOnFrame(event){
+    var t = event.time*1000;  
+    // update some global variables
+    ctl_FPS = (event.count)/event.time;
+
+    // check game status
+    switch(g_game_status){
+      case GAME_STATUS_READY:
+      // ready to start the game
+        g_game_status = GAME_STATUS_RUNNING;
+        g_game_start = t;
+        console.log("game started!");
+        break;
+      case GAME_STATUS_STOPPED:
+      // waiting for user's action 
+        return;
+      case GAME_STATUS_ENDED:
+      // about to redirect to the next page
+        g_game_status = GAME_STATUS_STOPPED;
+        /*
+        if(g_score>0)
+          alert("Congratulations, your score is: "+g_score + ". Press OK to continue.");
+        else
+          alert("Your score is: "+g_score + ". Press OK to continue.");
+        */
+        window.location = "finished.htm#"+JSON.stringify(g_meta_game);
+        return;
+      default:
+      // GAME_STATUS_RUNNING
+        ;
+    }
+
+
+    /* game is running */
+    var asteroids_x, asteroids_y;
+    g_duration = t-g_game_start;          //game g_duration
+    
+    /* check if the game tmes out */
+    if(g_duration >= g_attacks_schedule[ATTACK_TRIALS-1].attack_time + ATTACK_INTERVAL){
+      // time to stop
+      // g_game_status = GAME_STATUS_STOPPED;
+      g_game_status = GAME_STATUS_ENDED;
+      return;
+    }
+    
+    /* spawn target when ready */
+    if(g_current_trial<ATTACK_TRIALS){
+      if(g_duration >= g_attacks_schedule[g_current_trial].spawn_time
+         && g_attacks_schedule[g_current_trial].spawned != true){
+        // it is time to spawn target
+        console.log(g_duration+ "> spawn target frame.");
+        var offset = itm_canvas.getBoundingClientRect();
+        itm_target_frame.style.left = offset.left + g_attacks_schedule[g_current_trial].x + TARGET_DISPLACEMENT_X +"px";
+        itm_target_frame.style.top = offset.top + g_attacks_schedule[g_current_trial].y + TARGET_DISPLACEMENT_Y +"px";
+        itm_target_frame.style.visibility = 'visible';
+        // if the previous lights are still off, it is time to turn them on
+        if(g_remove_target_at_trial>=0){
+          console.log("turn on all lights of the previous trial:"+ (g_current_trial-1));
+          serverController.updateAtTrial(g_current_trial-1,true);
+          g_trial_not_showing_server = -1;
+          g_remove_target_at_trial = -1;
+        }
+        // turn off server, all lights, and text at this point
+        console.log("turn off all lights fo the current trial:"+g_current_trial);
+        serverController.updateAtTrial(g_current_trial,false);
+        g_trial_not_showing_server = g_current_trial;
+        g_attacks_schedule[g_current_trial].spawned = true;
+        g_remove_target_at_trial = g_current_trial;
+      }
+      if(g_duration >= g_attacks_schedule[g_current_trial].attack_time && g_current_trial< ATTACK_TRIALS){
+        console.log(g_duration+ "> attack point.");
+        // console.log("turn on all lights, trial:"+g_current_trial);
+        // serverController.updateAtTrial(g_current_trial,true);
+        // g_trial_not_showing_server = -1;
+        g_current_trial ++;
+      }
+      if(g_remove_target_at_trial>=0 && (g_current_trial == g_remove_target_at_trial+1)){
+        var dx = g_attacks_schedule[g_remove_target_at_trial].x - itm_asteroid_orig.position.x,
+            dy = g_attacks_schedule[g_remove_target_at_trial].y - itm_asteroid_orig.position.y;
+        if((dx*dx + dy*dy) >= TARGET_DISTANCE_TO_HIDE*TARGET_DISTANCE_TO_HIDE){
+          console.log(g_duration+ "> remove target.");
+          itm_target_frame.style.visibility = 'hidden';        
+          console.log("turn on all lights, trial:"+g_current_trial);
+          serverController.updateAtTrial(g_current_trial-1,true);
+          g_trial_not_showing_server = -1;
+          g_remove_target_at_trial = -1;          
+        }
+      }
+    }
+
+    
+    // compute current coords
+    asteroids_x = view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(g_duration * g_curve_a);
+    asteroids_y = view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(g_duration * g_curve_b);
+    
+    
+    /* manage color change */
+    switch(g_color_status){
+      case COLOR_STATUS_HIDDEN:
+        if((t- g_switch_last)>= g_switch_wait){
+          // time to start changing color
+          g_switch_last = t;
+          g_switch_wait = GLOWING_ADVANCE_TIME;
+          itm_asteroid_glowing.visible = true;
+          g_color_status = COLOR_STATUS_CHANGING;
+        }
+        break;
+      case COLOR_STATUS_CHANGING:
+        if((t- g_switch_last)>= g_switch_wait){
+          // fully visible
+          // console.log(g_duration+"> fully visible");
+          g_switch_last = t;
+          g_switch_wait = COLOR_SHOW_TIME;
+          itm_asteroid_color.opacity = 1;
+          g_color_status = COLOR_STATUS_SHOWN;
+        }else{
+          itm_asteroid_color.opacity = (t- g_switch_last)/g_switch_wait;
+        }
+        break;
+      case COLOR_STATUS_SHOWN:
+        if((t- g_switch_last)>= g_switch_wait){
+          // time to hide it now
+          // console.log(g_duration+"> to hide");
+          g_switch_last = t;
+          g_switch_wait = COLOR_INTERVAL_AVERAGE + COLOR_INTERVAL_VARIANCE*COLOR_INTERVAL_AVERAGE * (2*Math.random() - 1) - GLOWING_ADVANCE_TIME;
+          itm_asteroid_color.opacity = 0;
+          itm_asteroid_glowing.visible = false;
+          g_color_status = COLOR_STATUS_HIDDEN;
+        }
+        break;
+    }
+
+    /* update asteroid position */
+    itm_asteroid_orig.position.x = asteroids_x;
+    itm_asteroid_orig.position.y = asteroids_y;
+    itm_asteroid_color.position.x = asteroids_x;
+    itm_asteroid_color.position.y = asteroids_y;
+    itm_asteroid_glowing.position.x = asteroids_x;
+    itm_asteroid_glowing.position.y = asteroids_y;
+
+    /* update scores */
+    if(g_add_score_last>=0){
+      if(g_add_score_last==0)
+        g_add_score_last = t;
+      var progress = (t-g_add_score_last)/SCORE_SHOW_TIME;
+      if(progress >= 1){
+        g_add_score_last=-1;
+        itm_add_score.opacity = 1;
+        itm_add_score.visible = false;
+      }else{
+        itm_add_score.position.x += progress*SCORE_DX;
+        itm_add_score.position.y += progress*SCORE_DY;
+        itm_add_score.opacity = 1- progress;
+      }
+    }    
+    if(g_dec_score_last>=0){
+      if(g_dec_score_last==0)
+        g_dec_score_last = t;
+      var progress = (t-g_dec_score_last)/SCORE_SHOW_TIME;
+      if(progress >= 1){
+        g_dec_score_last=-1;
+        itm_dec_score.opacity = 1;
+        itm_dec_score.visible = false;
+      }else{
+        itm_dec_score.position.x += progress*SCORE_DX;
+        itm_dec_score.position.y += progress*SCORE_DY;
+        itm_dec_score.opacity = 1- progress;
+      }
+    }
+
+    /* control server lights */
+    if((t - g_server_lights_last) >= SERVER_LIGHT_INTERVAL){
+      g_server_lights_last = t;
+      var serv_idx = Math.floor(Math.random() * NUM_SERVERS);
+      serverController.switchLights(serv_idx);
+    }
+
+    /* background symbol */
+    // Run through the active layer's children list and change
+    // the position of the placed symbols:
+    for (var i = 0; i < BACKGROUND_SYMBOL_COUNT; i++) {
+        var item =  itm_background_layer.children[i];
+        //project.activeLayer.children[i];
+        
+        // Move the item 1/20th of its width to the right. This way
+        // larger circles move faster than smaller circles:
+        item.position.x += item.bounds.width / 20;
+
+        // If the item has left the view on the right, move it back
+        // to the left:
+        if (item.bounds.left > view.size.width) {
+            item.position.x = -item.bounds.width;
+        }
+    }
+  }
+    
+  function handleMouseoverTarget(){
+    if(typeof(itm_target_frame)=='undefined')
+      return;
+    if(itm_target_frame.style.visibility!='visible') { //shouldn't happen
+      console.log("error> target frame invisible and yet mouseover triggered!");
+      return;
+    }
+    
+    // change the color of the last asteroid
+    itm_asteroid_color.opacity = 1.0;
+    itm_asteroid_glowing.visible = true;
+  }
+    
+  function ppOnMouseDown(event) {
+    if(g_game_status == GAME_STATUS_STOPPED){
+      // start the game on click
+      g_game_status= GAME_STATUS_READY;
+      itm_start_guide.visible = false;
+      return;
+    }else{
+      var mouse_x, mouse_y, asteroid_x, asteroid_y;
+      mouse_x = event.getPoint().x;
+      mouse_y = event.getPoint().y;
+      asteroid_x = itm_asteroid_orig.position.x;
+      asteroid_y = itm_asteroid_orig.position.y;      
+      if (((asteroid_x - mouse_x)*(asteroid_x - mouse_x) + (asteroid_y-mouse_y)*(asteroid_y-mouse_y))<= 625){
+      //if(itm_asteroid_orig == event.item || itm_asteroid_color == event.item)
+        if (g_color_status == COLOR_STATUS_HIDDEN){
+          // apply penalty
+          itm_dec_score.position.x = event.point.x + 20;
+          itm_dec_score.position.y = event.point.y + 0;
+          g_dec_score_last = 0; //ready to show
+          itm_dec_score.visible = true;
+          g_score += SCORE_PENALTY;
+          itm_score_info.content = 'SCORE: '+g_score;
+        }
+        else{
+          // add score
+          //itm_add_score.position = event.point;
+          itm_add_score.position.x = event.point.x + 20;
+          itm_add_score.position.y = event.point.y + 0;
+          g_add_score_last = 0; //ready to show
+          itm_add_score.visible = true;
+          g_score += SCORE_AWARD;
+          itm_score_info.content = 'SCORE: '+g_score;
+        }
+      }
+    }//else
+  }
+
+  window.addEventListener("resize", function(){
+    item_canvas_area.style.width = (window.innerWidth - itm_canvas.getBoundingClientRect().left) +"px";
+    item_canvas_area.style.left = itm_canvas.getBoundingClientRect().left+"px";
+    item_canvas_area.style.top = itm_canvas.getBoundingClientRect().top+"px";
+  }, false);
+
+  window.addEventListener("message", function(e){
+    if(typeof(e.data)!='undefined' && e.data == 'liked'){
+      console.log("like button clicked!");
+      g_meta_game.liked = true;
+      g_meta_game.time = g_duration;
+      console.log(JSON.stringify(g_meta_game));
+      g_game_status = GAME_STATUS_ENDED;
+    }
+  }, false);
+
+  
+  window.onload = function() {
+      // Get a reference to the canvas object
+      itm_canvas = document.getElementById('canvas');
+      // Create an empty project and a view for the canvas:
+      paper.setup(itm_canvas);
+      // initialize paper
+      ppInit();
+      // install event handler
+      var tool = new Tool();
+      tool.onMouseDown = ppOnMouseDown;
+      tool.onMouseMove = ppOnMouseMove;
+      view.onFrame = ppOnFrame;
+  }
+  </script>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="target_box"> 
+    <iframe id="target_frame" onMouseover="handleMouseoverTarget()" src="http://bl.ocks.org/d/2806b518afc9ded32cc3/" scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe> 
+  </div>
+
+  <div id="canvas_area"> 
+  </div>
+
+</body>
+</html>
+
