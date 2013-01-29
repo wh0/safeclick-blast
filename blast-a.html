@@ -53,6 +53,7 @@ SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
 
 MIN_ADAPTATION = 3,
 MAX_ADAPTATION = 8,
+EXTRA_ADAPTATION_FIRST_TIME = 6, // make first stretch of non-attack trials longer
 ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
 ATTACK_SPAWN_MARGIN = 100, // min distance between random asteroid spawn and target
 
@@ -91,6 +92,7 @@ var likeCoords = null;
 var remaining = 0;
 var coveredServer = null;
 var gameStartTime = null;
+var extraAdaptation = EXTRA_ADAPTATION_FIRST_TIME;
 
 function init() {
 	// set up animation CSS
@@ -185,7 +187,7 @@ function serverStatus() {
 }
 
 function step() {
-	remaining--;
+	if (!extraAdaptation) remaining--;
 	if (remaining == -1) {
 		// just clicked on attack asteroid, reset everything
 		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
@@ -206,12 +208,12 @@ function step() {
 		likelike.style.left = likeCoords.x + 'px';
 		likelike.style.visibility = 'visible';
 	}
-	if (remaining > 0) {
+	if (extraAdaptation || remaining > 0) {
 		setTimeout(randomAsteroid, ASTEROID_SPAWN_DELAY);
 	} else {
 		setTimeout(attackAsteroid, ASTEROID_SPAWN_DELAY);
 	}
-	// %%% document.title = remaining;
+	if (extraAdaptation) extraAdaptation--;
 }
 
 function sqDist(u, v) {
