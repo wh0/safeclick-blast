@@ -1,0 +1,202 @@
+<!doctype html>
+<style>
+html{min-height:100%;line-height:16px;font-size:13px;font-family:sans-serif;color:#333333;}
+#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;cursor:none;}
+#decoy{position:absolute;top:232px;right:424px;margin:0;text-align:right;z-index:2;}
+#decoy a{cursor:inherit;}
+#likelike{position:absolute;top:228px;left:297px;z-index:2;}
+#pointer{position:fixed;visibility:hidden;pointer-events:none;z-index:3;}
+.random{position:absolute;pointer-events:none;z-index:1;}
+</style>
+<style>/* this one is populated by javascript */</style>
+<script>
+var
+DISTORTION_RADIUS = 240,
+DISTORTION_X = -120,
+DISTORTION_Y = 0,
+DISTORTION_FUNCTION = function (r) { return Math.cos(r * Math.PI) / 2 + 0.5; },
+
+RANDOM_RADIUS = 80,
+RANDOM_INTERVAL = 100, // ms between each distraction animation
+RANDOM_MOVE_TIME = 500,
+
+LASTMILE_FRAMES = 15,
+LASTMILE_FRAMERATE = 16, // ms per frame, not really frame rate
+LASTMILE_VI = 4; // amplify current velocity in bezier extrapolation
+
+var playarea = null;
+var likelike = null;
+var pointer = null;
+var distractInterval = null;
+var traceEvents = false;
+var ox, oy;
+var x0, y0, x1, y1;
+var lastMileAnimating = false;
+
+function init() {
+	// set up animation CSS
+	var ss = document.styleSheets[1];
+	var rule = 0;
+	if ('transition' in document.documentElement.style) {
+		ss.insertRule('.random{transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else if ('webkitTransition' in document.documentElement.style) {
+		ss.insertRule('.random{-webkit-transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else if ('mozTransition' in document.documentElement.style) {
+		ss.insertRule('.random{-moz-transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
+	} else {
+		console.log('):');
+		return;
+	}
+
+	playarea = document.getElementById('playarea');
+	likelike = document.getElementById('likelike');
+	pointer = document.getElementById('pointer');
+
+	playarea.addEventListener('mousemove', move);
+	playarea.addEventListener('mouseover', over);
+	playarea.addEventListener('mouseout', out);
+	window.addEventListener('resize', resize);
+	resize(null);
+
+	addEventListener('keydown', down);
+	addEventListener('keyup', up);
+
+	window.addEventListener('message', function (e) {
+		if (e.data == 'liked') {
+			finish(true);
+		}
+	});
+}
+
+function finish(liked) {
+	var o = {type: 'crooked', liked: liked};
+	var h = '#' + JSON.stringify(o);
+	location.href = 'finished.html' + h;
+}
+
+function over(e) {
+	if (traceEvents) console.log('over', e.target, e.relatedTarget);
+	if (e.target == likelike) animateLastMile();
+	if (e.target != playarea) return;
+	if (e.relatedTarget != null &&
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
+	pointer.style.visibility = 'visible';
+}
+
+function out(e) {
+	if (traceEvents) console.log('out', e.target, e.relatedTarget);
+	if (e.target != playarea) return;
+	if (e.relatedTarget != null &&
+	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
+	pointer.style.visibility = '';
+	if (distractInterval) {
+		clearInterval(distractInterval);
+		distractInterval = null;
+	}
+}
+
+function move(e) {
+	var cx = e.clientX;
+	var cy = e.clientY;
+	var dx = cx - ox;
+	var dy = cy - oy;
+	var dist = Math.sqrt(dx * dx + dy * dy);
+	var ax, ay;
+	if (dist < DISTORTION_RADIUS) {
+		var v = DISTORTION_FUNCTION(dist / DISTORTION_RADIUS);
+		ax = v * DISTORTION_X;
+		ay = v * DISTORTION_Y;
+	} else {
+		ax = ay = 0;
+	}
+	if (!lastMileAnimating) {
+		pointer.style.top = cy + ay + 'px';
+		pointer.style.left = cx + ax + 'px';
+	}
+
+	// update saved velocity and position
+	x0 = x1; y0 = y1;
+	x1 = cx + ax; y1 = cy + ay;
+
+	if (!distractInterval && dist < RANDOM_RADIUS) {
+		distractInterval = setInterval(distract, RANDOM_INTERVAL);
+	} else if (distractInterval && dist > RANDOM_RADIUS) {
+		clearInterval(distractInterval);
+		distractInterval = null;
+	}
+}
+
+function resize(e) {
+	ox = playarea.offsetLeft + playarea.offsetWidth / 2;
+	oy = playarea.offsetTop + playarea.offsetHeight / 2;
+}
+
+function down(e) {
+	if (e.shiftKey) {
+		traceEvents = true;
+		playarea.style.backgroundColor = '#f0f0f0';
+		playarea.style.cursor = 'crosshair';
+	}
+}
+
+function up(e) {
+	if (!e.shiftKey) {
+		traceEvents = false;
+		playarea.style.backgroundColor = '';
+		playarea.style.cursor = '';
+	}
+}
+
+function distract() {
+	var img = document.createElement('img');
+	img.className = 'random';
+	img.src = 'http://i.imgur.com/EWmYMN2.png';
+	img.style.top = Math.random() * 160 + 160 + 'px';
+	img.style.left = Math.random() * 160 + 240 + 'px';
+	playarea.appendChild(img);
+	var dummy = img.clientHeight;
+	img.style.top = Math.random() * 160 + 160 + 'px';
+	img.style.left = Math.random() * 160 + 240 + 'px';
+	setTimeout(function () {
+		playarea.removeChild(img);
+	}, RANDOM_MOVE_TIME);
+}
+
+function animateLastMile() {
+	function schedule(d, x, y) {
+		setTimeout(function () {
+			pointer.style.top = y + 'px';
+			pointer.style.left = x + 'px';
+		}, d);
+	}
+	function bezier(t, a, b, c, d) {
+		var u = 1 - t;
+		return u*u*u*a + 3*u*u*t*b + 3*u*t*t*c + t*t*t*d;
+	}
+	var x1a = x0 + LASTMILE_VI * (x1 - x0);
+	var y1a = y0 + LASTMILE_VI * (y1 - y0);
+	var xf = ox - 120;
+	var yf = oy;
+	lastMileAnimating = true;
+	// bezier(xy0, xy1, dst, dst)
+	for (var i = 1; i < LASTMILE_FRAMES; i++) {
+		var d = i * LASTMILE_FRAMERATE;
+		var t = i / LASTMILE_FRAMES;
+		var x = bezier(t, x0, x1a, xf, xf);
+		var y = bezier(t, y0, y1a, yf, yf);
+		schedule(d, x, y);
+	}
+	setTimeout(function () {
+		pointer.style.top = yf + 'px';
+		pointer.style.left = xf + 'px';
+		lastMileAnimating = false;
+	}, LASTMILE_FRAMES * LASTMILE_FRAMERATE);
+}
+</script>
+<body>
+<div id="playarea">
+	<p id="decoy">feel free to click <a href="/" onclick="finish(); return false">here</a></p>
+	<iframe id="likelike"    src="http://bl.ocks.org/d/ea274ec62f0c248144e5/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
+	<img id="pointer" src="http://i.imgur.com/EWmYMN2.png">
+</div>
+<script>init();</script>
