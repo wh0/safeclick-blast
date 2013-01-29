@@ -1,0 +1,17 @@
+html{
+	background-color:#f0f0ff;
+	font-size:13px;
+	font-family:sans-serif;
+}
+
+#middle{
+	position:absolute;
+	left:0;
+	right:0;
+	margin:100px auto;
+	border-radius:16px;
+	border:1px solid #c0c0c0;
+	padding:16px 32px;
+	width:600px;
+	background-color:#ffffff;
+}
