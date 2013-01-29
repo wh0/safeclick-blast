@@ -1,6 +1,7 @@
 <!doctype html>
 <style>
 html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
+#playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
 p{text-shadow:black 0 1px 3px;}
 #likelike{position:absolute;visibility:hidden;z-index:3;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
@@ -79,6 +80,7 @@ var banter = [
 	'does this look like spam to you?'
 ];
 
+var playarea = null;
 var likelike = null;
 var score = 0;
 var scoreDisplay = null;
@@ -111,6 +113,12 @@ function init() {
 		return;
 	}
 
+	// get main elements
+	playarea = document.getElementById('playarea');
+	likelike = document.getElementById('likelike');
+	blink = document.getElementById('blink');
+	scoreDisplay = document.getElementById('scoreDisplay');
+
 	// add servers
 	for (var i = 0; i < NUM_SERVERS; i++) {
 		var c = randomCoords();
@@ -120,11 +128,6 @@ function init() {
 		serverDivs.push(server(c.x, c.y));
 		serverCoords.push(c);
 	}
-
-	// get main elements
-	likelike = document.getElementById('likelike');
-	blink = document.getElementById('blink');
-	scoreDisplay = document.getElementById('scoreDisplay');
 
 	// make screen busier
 	setInterval(serverLights, SERVER_LIGHT_INTERVAL);
@@ -257,7 +260,7 @@ function asteroid(x, y, dx, dy) {
 		div.className = 'dead';
 		div.style.opacity = '0';
 		setTimeout(function () {
-			document.body.removeChild(div);
+			playarea.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
 		mineral(x, y, dx, dy);
 		number(x, y, '+1');
@@ -265,7 +268,7 @@ function asteroid(x, y, dx, dy) {
 		addScore(1);
 		step();
 	});
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 }
 
 function mineral(x, y, dx, dy) {
@@ -277,17 +280,17 @@ function mineral(x, y, dx, dy) {
 		div.style.opacity = '0';
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
 	var tRemove = setTimeout(function () {
-		document.body.removeChild(div);
+		playarea.removeChild(div);
 		execBlink(BLINK_MINERAL_DISINTEGRATE);
 	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
 	div.addEventListener('click', function (e) {
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
-		document.body.removeChild(div);
+		playarea.removeChild(div);
 		number(x + dx, y + dy, '+3');
 		addScore(3);
 	});
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.top = y + dy + 'px';
 	div.style.left = x + dx + 'px';
@@ -300,9 +303,9 @@ function number(x, y, text) {
 	div.style.left = x + 'px';
 	div.textContent = text;
 	setTimeout(function () {
-		document.body.removeChild(div);
+		playarea.removeChild(div);
 	}, SCORE_SHOW_TIME);
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.left = x + SCORE_DX + 'px';
 	div.style.top = y + SCORE_DY + 'px';
@@ -315,7 +318,7 @@ function server(x, y) {
 	div.style.top = y + 'px';
 	div.style.left = x + 'px';
 	div.textContent = Math.floor(10 / Math.random()) + ' requests pending.';
-	document.body.appendChild(div);
+	playarea.appendChild(div);
 	return div;
 }
 
@@ -331,6 +334,8 @@ window.onunload = function () {
 </script>
 <body>
 <p id="scoreLine">SCORE: <span id="scoreDisplay">0</span></p>
+<div id="playarea">
 <iframe id="likelike"    src="http://bl.ocks.org/d/2806b518afc9ded32cc3/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
 <div id="blink"></div>
+</div>
 <script>init();</script>
