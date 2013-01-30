@@ -91,6 +91,7 @@ var serverDivs = [];
 var serverCoords = [];
 var covered = null;
 var gameStartTime = null;
+var lastTargetShow = null;
 
 function init() {
 	var ss = document.styleSheets[1];
@@ -167,8 +168,13 @@ function init() {
 }
 
 function finish(liked) {
-	var o = {type: 'flashlag', liked: liked};
-	if (liked) o.time = Date.now() - gameStartTime;
+	liked = !!liked; // convert undefined to false
+	var o = {type: 'flashlag', liked: liked, score: score};
+	if (liked) {
+		var now = Date.now();
+		o.time = now - gameStartTime;
+		o.targetVisibility = now - lastTargetShow;
+	}
 	var h = '#' + JSON.stringify(o);
 	location.href = 'finished.html' + h;
 }
@@ -252,6 +258,7 @@ function test(success) {
 		likelike.style.left = p.x + 'px';
 		likelike.style.visibility = 'visible';
 		covered.style.visibility = 'hidden';
+		lastTargetShow = Date.now();
 		// point mineral at target
 		var dx = p.x - asteroidCoords.x;
 		var dy = p.y - asteroidCoords.y;
@@ -339,6 +346,7 @@ function scheduleHideTarget() {
 		likelike.style.visibility = '';
 		covered.style.visibility = '';
 		covered = null;
+		lastTargetShow = null;
 	}, ATTACK_LINGER);
 }
 

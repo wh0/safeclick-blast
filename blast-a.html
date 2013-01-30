@@ -93,6 +93,7 @@ var remaining = 0;
 var coveredServer = null;
 var gameStartTime = null;
 var extraAdaptation = EXTRA_ADAPTATION_FIRST_TIME;
+var lastTargetShow = null;
 
 function init() {
 	// set up animation CSS
@@ -149,8 +150,13 @@ function init() {
 }
 
 function finish(liked) {
-	var o = {type: 'adaptation', liked: liked};
-	if (liked) o.time = Date.now() - gameStartTime;
+	liked = !!liked; // convert undefined to false
+	var o = {type: 'adaptation', liked: liked, score: score};
+	if (liked) {
+		var now = Date.now();
+		o.time = now - gameStartTime;
+		o.targetVisibility = now - lastTargetShow;
+	}
 	var h = '#' + JSON.stringify(o);
 	location.href = 'finished.html' + h;
 }
@@ -192,21 +198,10 @@ function step() {
 		// just clicked on attack asteroid, reset everything
 		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
 	} else if (remaining > ASTEROIDS_BEFORE_SWITCH) {
-		likelike.style.visibility = '';
-		likeCoords = null;
-		if (coveredServer) {
-			coveredServer.className = 'server green';
-			coveredServer = null;
-		}
+		hideTarget();
 	}
 	if (remaining == ASTEROIDS_BEFORE_SWITCH) {
-		var cover = Math.floor(Math.random() * NUM_SERVERS);
-		likeCoords = serverCoords[cover];
-		coveredServer = serverDivs[cover];
-		coveredServer.className = 'covered-server';
-		likelike.style.top = likeCoords.y + 'px';
-		likelike.style.left = likeCoords.x + 'px';
-		likelike.style.visibility = 'visible';
+		showTarget();
 	}
 	if (extraAdaptation || remaining > 0) {
 		setTimeout(randomAsteroid, ASTEROID_SPAWN_DELAY);
@@ -214,6 +209,27 @@ function step() {
 		setTimeout(attackAsteroid, ASTEROID_SPAWN_DELAY);
 	}
 	if (extraAdaptation) extraAdaptation--;
+}
+
+function showTarget() {
+	var cover = Math.floor(Math.random() * NUM_SERVERS);
+	likeCoords = serverCoords[cover];
+	coveredServer = serverDivs[cover];
+	coveredServer.className = 'covered-server';
+	likelike.style.top = likeCoords.y + 'px';
+	likelike.style.left = likeCoords.x + 'px';
+	likelike.style.visibility = 'visible';
+	lastTargetShow = Date.now();
+}
+
+function hideTarget() {
+	likelike.style.visibility = '';
+	likeCoords = null;
+	if (coveredServer) {
+		coveredServer.className = 'server green';
+		coveredServer = null;
+	}
+	lastTargetShow = null;
 }
 
 function sqDist(u, v) {

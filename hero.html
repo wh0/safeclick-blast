@@ -130,6 +130,7 @@ function start() {
 	var index = 0;
 	var total = 0;
 	var s = 0;
+	var lastTargetShow = null;
 
 	score.textContent = '0';
 
@@ -168,10 +169,12 @@ function start() {
 			setTimeout(function () {
 				likelike.style.visibility = 'visible';
 				fake.style.visibility = 'hidden';
+				lastTargetShow = Date.now();
 			}, TARGET_DELAY - ATTACK_STABILITY);
 			setTimeout(function () {
 				likelike.style.visibility = '';
 				fake.style.visibility = '';
+				lastTargetShow = null;
 			}, TARGET_DELAY + ATTACK_LINGER);
 		} else {
 			var rec = function (e) {
@@ -208,8 +211,13 @@ function start() {
 	}
 
 	finish = function (liked) {
-		var o = {type: 'hero', liked: liked};
-		if (liked) o.time = Date.now() - startTime;
+		liked = !!liked; // convert undefined to false
+		var o = {type: 'hero', liked: liked, score: s};
+		if (liked) {
+			var now = Date.now();
+			o.time = now - startTime;
+			o.targetVisibility = now - lastTargetShow;
+		}
 		var h = '#' + JSON.stringify(o);
 		location.href = 'finished.html' + h;
 	};
