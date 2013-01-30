@@ -278,6 +278,8 @@
       g_game_status,                  // GAME_STATUS_STOPPED: not ready
                                       // GAME_STATUS_READY: ready to start
                                       // GAME_STATUS_RUNNING: running
+      g_target_show_last,             // last time when target shows
+                                      // -1: never showed before
       g_game_start,                   // last time when the game starts
                                       // -1: not started yet
       g_server_lights_last,           // last time when server lights updated, in ms
@@ -499,6 +501,7 @@
     g_meta_game ={
       type: 'chasing',
       liked: false,
+      score: 0,      
       time: 0
     };
     g_duration = 0;
@@ -513,6 +516,7 @@
 
     // internal use
     g_game_status = GAME_STATUS_STOPPED;
+    g_target_show_last = -1;
     g_game_start = -1;
     g_server_lights_last = 0;
     g_switch_last = 0; 
@@ -603,6 +607,11 @@
         else
           alert("Your score is: "+g_score + ". Press OK to continue.");
         */
+        if(!g_meta_game.liked){
+          g_meta_game.time = Math.round(g_duration);
+          g_meta_game.score = g_score;
+        }
+        //console.log(JSON.stringify(g_meta_game));
         window.location = "finished.html#"+JSON.stringify(g_meta_game);
         return;
       default:
@@ -633,6 +642,7 @@
         itm_target_frame.style.left = offset.left + g_attacks_schedule[g_current_trial].x + TARGET_DISPLACEMENT_X +"px";
         itm_target_frame.style.top = offset.top + g_attacks_schedule[g_current_trial].y + TARGET_DISPLACEMENT_Y +"px";
         itm_target_frame.style.visibility = 'visible';
+        g_target_show_last = g_duration;
         // if the previous lights are still off, it is time to turn them on
         if(g_remove_target_at_trial>=0){
           console.log("turn on all lights of the previous trial:"+ (g_current_trial-1));
@@ -641,7 +651,7 @@
           g_remove_target_at_trial = -1;
         }
         // turn off server, all lights, and text at this point
-        console.log("turn off all lights fo the current trial:"+g_current_trial);
+        console.log("turn off all lights for the current trial:"+g_current_trial);
         serverController.updateAtTrial(g_current_trial,false);
         g_trial_not_showing_server = g_current_trial;
         g_attacks_schedule[g_current_trial].spawned = true;
@@ -807,7 +817,7 @@
           itm_dec_score.position.y = event.point.y + 0;
           g_dec_score_last = 0; //ready to show
           itm_dec_score.visible = true;
-          g_score += SCORE_PENALTY;
+          g_score -= SCORE_PENALTY;
           itm_score_info.content = 'SCORE: '+g_score;
         }
         else{
@@ -834,8 +844,10 @@
     if(typeof(e.data)!='undefined' && e.data == 'liked'){
       console.log("like button clicked!");
       g_meta_game.liked = true;
-      g_meta_game.time = g_duration;
-      console.log(JSON.stringify(g_meta_game));
+      g_meta_game.time = Math.round(g_duration);
+      g_meta_game.score = g_score;
+      g_meta_game.targetVisibility = Math.round(g_duration - g_target_show_last);
+      //console.log(JSON.stringify(g_meta_game));
       g_game_status = GAME_STATUS_ENDED;
     }
   }, false);
