@@ -340,7 +340,7 @@
   function ppInit(){
     /* layout canvas elements (in z-index increasing order)*/
     // canvas
-    view.viewSize = {width: PLAYAREA_WIDTH, height: PLAYAREA_HEIGHT};
+    paper.view.viewSize = {width: PLAYAREA_WIDTH, height: PLAYAREA_HEIGHT};
 
     // a new layer solely for the background image
     itm_background_layer= new Layer();
@@ -354,8 +354,8 @@
     };
     itm_background_symbol = new Symbol(path);
     for (var i = 0; i < BACKGROUND_SYMBOL_COUNT; i++) {
-      var center = {x: view.size.width*Math.random(), 
-                  y: view.size.height*Math.random()};        
+      var center = {x: paper.view.size.width*Math.random(), 
+                  y: paper.view.size.height*Math.random()};        
       var placedSymbol = itm_background_symbol.place(center);
       //itm_background_layer.addChild(placedSymbol);
       placedSymbol.scale(i / BACKGROUND_SYMBOL_COUNT);
@@ -419,7 +419,7 @@
     // start guide
     itm_start_guide  = new PointText();
     itm_start_guide.visible = true;
-    itm_start_guide.position=view.center;
+    itm_start_guide.position= paper.view.center;
     itm_start_guide.paragraphStyle.justification = 'left';
     //itm_start_guide.font = 'bold 15 sans-serif';
     itm_start_guide.characterStyle.fontSize = 30;
@@ -536,15 +536,15 @@
 
     // reset items
     itm_score_info.content = 'SCORE: 0';
-    itm_asteroid_orig.position = view.center;
+    itm_asteroid_orig.position = paper.view.center;
     itm_start_guide.visible = true;
-    itm_start_guide.position.x = view.center.x + 170;
-    itm_start_guide.position.y = view.center.y;
+    itm_start_guide.position.x = paper.view.center.x + 170;
+    itm_start_guide.position.y = paper.view.center.y;
     itm_target_frame.style.visibility = 'hidden';
-    itm_asteroid_orig.position = view.center;
-    itm_asteroid_glowing.position = view.center;
+    itm_asteroid_orig.position = paper.view.center;
+    itm_asteroid_glowing.position = paper.view.center;
     itm_asteroid_glowing.visible = false;
-    itm_asteroid_color.position = view.center;
+    itm_asteroid_color.position = paper.view.center;
     itm_asteroid_color.opacity = 0;
     item_canvas_area.style.visibility = 'visible';
     item_canvas_area.style.width = (window.innerWidth - itm_canvas.getBoundingClientRect().left) +"px";
@@ -560,8 +560,8 @@
       attack_time = time + ATTACK_TIME_MIN+ Math.random()*(ATTACK_TIME_MAX - ATTACK_TIME_MIN);
       spawn_time = attack_time - (TARGET_AHEADTIME_MIN+ Math.random()*(TARGET_AHEADTIME_MAX - TARGET_AHEADTIME_MIN));
       time = attack_time + ATTACK_INTERVAL;
-      var x = Math.round(view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(attack_time * g_curve_a)) + DISPLACEMENT_ORBIT_X;
-      var y = Math.round(view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(attack_time * g_curve_b)) + DISPLACEMENT_ORBIT_Y;
+      var x = Math.round(paper.view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(attack_time * g_curve_a)) + DISPLACEMENT_ORBIT_X;
+      var y = Math.round(paper.view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(attack_time * g_curve_b)) + DISPLACEMENT_ORBIT_Y;
       // console.log("x:"+x+" y:"+y);
       g_attacks_schedule.push({spawn_time:spawn_time, attack_time:attack_time, x: x, y:y, spawned: false});
       // reset servers and lights
@@ -612,8 +612,8 @@
           g_meta_game.time = Math.round(g_duration);
           g_meta_game.score = g_score;
         }
-        //console.log(JSON.stringify(g_meta_game));
-        window.location = "finished.html#"+JSON.stringify(g_meta_game);
+        console.log(JSON.stringify(g_meta_game));
+        location.href = "finished.html#"+JSON.stringify(g_meta_game);
         return;
       default:
       // GAME_STATUS_RUNNING
@@ -681,8 +681,8 @@
 
     
     // compute current coords
-    asteroids_x = view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(g_duration * g_curve_a);
-    asteroids_y = view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(g_duration * g_curve_b);
+    asteroids_x = paper.view.center.x + ASTEROID_SPAWN_WIDTH/2 * Math.sin(g_duration * g_curve_a);
+    asteroids_y = paper.view.center.y + ASTEROID_SPAWN_HEIGHT/2 * Math.sin(g_duration * g_curve_b);
     
     
     /* manage color change */
@@ -779,7 +779,7 @@
 
         // If the item has left the view on the right, move it back
         // to the left:
-        if (item.bounds.left > view.size.width) {
+        if (item.bounds.left > paper.view.size.width) {
             item.position.x = -item.bounds.width;
         }
     }
@@ -865,7 +865,7 @@
       var tool = new Tool();
       tool.onMouseDown = ppOnMouseDown;
       tool.onMouseMove = ppOnMouseMove;
-      view.onFrame = ppOnFrame;
+      paper.view.onFrame = ppOnFrame;
   }
   </script>
 </head>
