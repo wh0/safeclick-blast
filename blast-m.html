@@ -405,24 +405,25 @@
     itm_add_score  = new PointText();
     itm_add_score.visible = false;
     itm_add_score.paragraphStyle.justification = 'left';
-    itm_add_score.characterStyle.fontSize = 50;
-    itm_add_score.fillColor = 'red';
+    itm_add_score.characterStyle.fontSize = 55;
+    itm_add_score.fillColor = 'green';
     //itm_add_score.font = 'bold 96pt sans-serif';
     itm_add_score.content = '+ '+SCORE_AWARD;
     // score (decrease)
     itm_dec_score  = new PointText();
     itm_dec_score.visible = false;
     itm_dec_score.paragraphStyle.justification = 'left';
-    itm_dec_score.characterStyle.fontSize = 40;
-    itm_dec_score.fillColor = 'lightgrey';
+    itm_dec_score.characterStyle.fontSize = 50;
+    itm_dec_score.fillColor = 'red';
     itm_dec_score.content = '- '+SCORE_PENALTY;
     // start guide
     itm_start_guide  = new PointText();
     itm_start_guide.visible = true;
     itm_start_guide.position=view.center;
     itm_start_guide.paragraphStyle.justification = 'left';
-    itm_start_guide.characterStyle.fontSize = 15;
-    itm_start_guide.fillColor = 'darkred';
+    //itm_start_guide.font = 'bold 15 sans-serif';
+    itm_start_guide.characterStyle.fontSize = 30;
+    itm_start_guide.fillColor = 'white';
     itm_start_guide.content = '- Click anywhere around asteroid to play -';
 
 
