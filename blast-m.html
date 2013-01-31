@@ -358,7 +358,7 @@
                   y: paper.view.size.height*Math.random()};        
       var placedSymbol = itm_background_symbol.place(center);
       //itm_background_layer.addChild(placedSymbol);
-      placedSymbol.scale(i / BACKGROUND_SYMBOL_COUNT);
+      placedSymbol.scale((i+0.0001) / BACKGROUND_SYMBOL_COUNT);
     }
 
 
@@ -584,6 +584,7 @@
   }
 
   function ppOnFrame(event){
+    //console.log("ppOnframe");
     var t = event.time*1000;  
     // update some global variables
     ctl_FPS = (event.count)/event.time;
@@ -612,7 +613,6 @@
           g_meta_game.time = Math.round(g_duration);
           g_meta_game.score = g_score;
         }
-        console.log(JSON.stringify(g_meta_game));
         location.href = "finished.html#"+JSON.stringify(g_meta_game);
         return;
       default:
@@ -871,7 +871,7 @@
 </head>
 
 <body>
-  <canvas id="canvas"></canvas>
+  <canvas id="canvas"  keepalive="true"></canvas>
   <div id="target_box"> 
     <iframe id="target_frame" onMouseover="handleMouseoverTarget()" src="http://bl.ocks.org/d/2806b518afc9ded32cc3/" scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe> 
   </div>
