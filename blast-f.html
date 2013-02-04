@@ -1,6 +1,6 @@
 <!doctype html>
 <style>
-html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
+html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;overflow:hidden;}
 #playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
 #likelike{position:absolute;visibility:hidden;}
 #scoreLine{font-size:smaller;color:#a0a0a0;}
@@ -8,7 +8,7 @@ html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:
 .asteroid{position:absolute;margin:-25px;width:50px;height:50px;background-image:url("http://i.imgur.com/YLScueS.png");}
 .hint{position:absolute;}
 .dead{position:absolute;margin:-44px -40px;width:80px;height:88px;background-image:url("http://i.imgur.com/vvTQy.png");background-size:100%;}
-.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/cELTk.png");background-size:200%;}
+.mineral{position:absolute;margin:-16px;width:32px;height:32px;background-position:center;background-image:url("http://i.imgur.com/YNsRNGO.png");}
 .number{position:absolute;margin:-8px -32px;width:64px;line-height:16px;text-align:center;color:white;}
 .server{position:absolute;height:24px;padding:4px 0 0 71px;background:transparent url("http://i.imgur.com/VOoaw.png") no-repeat;font-size:11px;font-family:"Lucida Grande","Tahoma","Verdana","Arial",sans-serif;color:#808080;white-space:nowrap;z-index:-1;}
 .server:after{position:absolute;top:6px;left:53px;width:12px;height:12px;content:"";}
@@ -45,7 +45,7 @@ MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
 MINERAL_START_SPEED = 30 / 60 * 1000, // the first mineral takes this long to displace, in ms
 MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
 MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
-MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
+MINERAL_FADE_TIME = 500, // clickable time at destination while it fades out
 
 SERVER_MOVE_TIME = 1000,
 SERVER_MIN_RADIUS = MINERAL_DISPLACEMENT * 0.8,
@@ -102,17 +102,17 @@ function init() {
 	var rule = 0;
 	if ('transition' in document.documentElement.style) {
 		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.mineral{transition-property:left,top,opacity;transition-timing-function:ease-in;}', rule++);
 		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
 		transitionDurationName = 'transitionDuration';
 	} else if ('webkitTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;-webkit-transition-timing-function:ease-in;}', rule++);
 		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
 		transitionDurationName = 'webkitTransitionDuration';
 	} else if ('mozTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
+		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;-moz-transition-timing-function:ease-in;}', rule++);
 		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
 		transitionDurationName = 'mozTransitionDuration';
 	} else {
@@ -316,7 +316,7 @@ function asteroid(x, y, other) {
 		setTimeout(function () {
 			playarea.removeChild(div);
 		}, ASTEROID_EXPLODE_TIME);
-		mineral(x, y, displacement.x, displacement.y, duration, duration * MINERAL_FADE_PROPORTION);
+		mineral(x, y, displacement.x, displacement.y, duration, MINERAL_FADE_TIME);
 	}, ARROW_SPIN_TIME);
 	playarea.appendChild(div);
 }
@@ -330,27 +330,29 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	var state = 'pending';
 	var tFade = setTimeout(function () {
 		div.style.opacity = '0';
-	}, displacementDuration - fadeDuration);
+		div.style.backgroundImage = 'url("http://i.imgur.com/CL6kNZq.png")';
+
+		div.addEventListener('mousedown', function (e) {
+			clearTimeout(tFade);
+			clearTimeout(tRemove);
+			playarea.removeChild(div);
+			if (covered) scheduleHideTarget();
+			var cx = e.clientX - playarea.offsetLeft;
+			var cy = e.clientY - playarea.offsetTop;
+			number(cx, cy, '+3');
+			addScore(3);
+			setTimeout(function () {
+				test('hit');
+			}, ASTEROID_SPAWN_DELAY);
+		});
+	}, displacementDuration);
 	var tRemove = setTimeout(function () {
 		playarea.removeChild(div);
 		if (covered) scheduleHideTarget();
 		misclickListener = null;
 		if (state == 'pending') state = 'miss';
 		test(state);
-	}, displacementDuration);
-	div.addEventListener('mousedown', function (e) {
-		clearTimeout(tFade);
-		clearTimeout(tRemove);
-		playarea.removeChild(div);
-		if (covered) scheduleHideTarget();
-		var cx = e.clientX - playarea.offsetLeft;
-		var cy = e.clientY - playarea.offsetTop;
-		number(cx, cy, '+3');
-		addScore(3);
-		setTimeout(function () {
-			test('hit');
-		}, ASTEROID_SPAWN_DELAY);
-	});
+	}, displacementDuration + fadeDuration);
 	misclickListener = function (cx, cy) {
 		if (state != 'pending') return;
 		var cdx = cx - x;
