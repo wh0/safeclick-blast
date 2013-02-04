@@ -37,11 +37,14 @@ SCORE_DX = 8, // movement of +x score text
 SCORE_DY = 0,
 
 OVERSHOOT = 1.2, // ratio of expected click displacement to mineral displacement
+OVERSHOOT_MIN = 1.0, // a sector around just beyond the mineral displacement
+OVERSHOOT_MAX = 1.4,
+OVERSHOOT_ANGLE_TOLERANCE = Math.cos(0.17), // cosine of allowed angle deviation, i.e. half the arc angle
 
 MINERAL_DISPLACEMENT = 200, // absolute displacement of mineral
 MINERAL_START_SPEED = 30 / 60 * 1000, // the first mineral takes this long to displace, in ms
-MINERAL_SPEED_INCREMENT = 1, // multiplicative displacement time reduction on each success
-MINERAL_SPEED_DECREMENT = 1, // multiplicative displacement time increase on each failure
+MINERAL_SPEED_INCREMENT = 0.9, // multiplicative displacement time reduction on each success
+MINERAL_SPEED_DECREMENT = 1.05, // multiplicative displacement time increase on each failure
 MINERAL_FADE_PROPORTION = 0.25, // the mineral fades out during this final fraction of the movement
 
 SERVER_MOVE_TIME = 1000,
@@ -92,6 +95,7 @@ var serverCoords = [];
 var covered = null;
 var gameStartTime = null;
 var lastTargetShow = null;
+var misclickListener = null;
 
 function init() {
 	var ss = document.styleSheets[1];
@@ -129,6 +133,7 @@ function init() {
 
 	scoreDisplay = document.getElementById('scoreDisplay');
 	playarea = document.getElementById('playarea');
+	playarea.addEventListener('click', misclick);
 	likelike = document.getElementById('likelike');
 
 	// randomize asteroid coordinates
@@ -156,7 +161,7 @@ function init() {
 	setInterval(serverText, SERVER_TEXT_INTERVAL);
 	setInterval(serverStatus, SERVER_STATUS_INTERVAL);
 
-	test(false);
+	test('none');
 
 	gameStartTime = Date.now();
 	setTimeout(finish, GAME_MAX_DURATION);
@@ -165,6 +170,14 @@ function init() {
 			finish(true);
 		}
 	});
+}
+
+function misclick(e) {
+	if (misclickListener) {
+		var cx = e.clientX - playarea.offsetLeft;
+		var cy = e.clientY - playarea.offsetTop;
+		misclickListener(cx, cy);
+	}
 }
 
 function finish(liked) {
@@ -237,19 +250,19 @@ function randomServerPosition() {
 	return c;
 }
 
-function test(success) {
+function test(result) {
 	attempts++;
-	if (success) {
+	if (result == 'hit') {
 		// clicked mineral
 		duration *= MINERAL_SPEED_INCREMENT;
 		failures = 0;
-	} else {
+	} else if (result == 'miss') {
 		// mineral disappeared
 		duration *= MINERAL_SPEED_DECREMENT;
 		failures++;
 	}
 
-	if (attempts == ASTEROIDS_BEFORE_ATTACK || failures == FAILURES_BEFORE_ATTACK) {
+	if (result == 'overshot' || attempts == ASTEROIDS_BEFORE_ATTACK || failures == FAILURES_BEFORE_ATTACK) {
 		var si = Math.floor(Math.random() * NUM_SERVERS_RING);
 		var p = serverCoords[si];
 		covered = serverDivs[si];
@@ -314,13 +327,16 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 	div.style.top = y + 0.2 * dy + 'px';
 	div.style.left = x + 0.2 * dx + 'px';
 	div.style[transitionDurationName] = displacementDuration + 'ms,' + displacementDuration + 'ms,' + fadeDuration + 'ms';
+	var state = 'pending';
 	var tFade = setTimeout(function () {
 		div.style.opacity = '0';
 	}, displacementDuration - fadeDuration);
 	var tRemove = setTimeout(function () {
 		playarea.removeChild(div);
 		if (covered) scheduleHideTarget();
-		test(false);
+		misclickListener = null;
+		if (state == 'pending') state = 'miss';
+		test(state);
 	}, displacementDuration);
 	div.addEventListener('mousedown', function (e) {
 		clearTimeout(tFade);
@@ -332,9 +348,25 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 		number(cx, cy, '+3');
 		addScore(3);
 		setTimeout(function () {
-			test(true);
+			test('hit');
 		}, ASTEROID_SPAWN_DELAY);
 	});
+	misclickListener = function (cx, cy) {
+		if (state != 'pending') return;
+		var cdx = cx - x;
+		var cdy = cy - y;
+		// check displacement
+		var mds = dx * dx + dy * dy;
+		var mcds = cdx * cdx + cdy * cdy;
+		if (mcds / mds < OVERSHOOT_MIN * OVERSHOOT_MIN) return;
+		if (mcds / mds > OVERSHOOT_MAX * OVERSHOOT_MAX) return;
+		// check angle
+		var dot = cdx * dx + cdy * dy;
+		var mp = Math.sqrt(mds * mcds);
+		if (dot / mp < OVERSHOOT_ANGLE_TOLERANCE) return;
+		// just overshot
+		state = 'overshot';
+	};
 	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.top = y + dy + 'px';
