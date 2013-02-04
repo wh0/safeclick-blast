@@ -42,9 +42,12 @@ MINERAL_DX = 0, // normal displacement of mineral
 MINERAL_DY = -120,
 MINERAL_ATTACK_DX = 0, // displacement of mineral on attack
 MINERAL_ATTACK_DY = -80,
-MINERAL_MOVE_TIME = 80, // time taken to displace mineral, in ms
-MINERAL_HOLD_TIME = 100, // time between arriving at final destination and fading start, in ms
-MINERAL_FADE_TIME = 200, // time to fade mineral, in ms
+MINERAL_MOVE_TIME = 160, // time taken to displace mineral, in ms
+MINERAL_HOLD_TIME = 200, // time between arriving at final destination and fading start, in ms
+MINERAL_FADE_TIME = 400, // time to fade mineral, in ms
+MINERAL_TIMESCALE_PER_LEVEL = 0.9,
+MINERAL_TIMESCALE_LEVELS = 6,
+MINERAL_SUCCESSES_PER_LEVEL = 2,
 
 NUM_SERVERS = 12,
 SERVER_LIGHT_INTERVAL = 1500 / NUM_SERVERS, // every (this many) milliseconds, set a random server's light to a random value
@@ -53,15 +56,15 @@ SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
 
 MIN_ADAPTATION = 3,
 MAX_ADAPTATION = 8,
-EXTRA_ADAPTATION_FIRST_TIME = 6, // make first stretch of non-attack trials longer
 ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
 ATTACK_SPAWN_MARGIN = 100, // min distance between random asteroid spawn and target
 
 BLINK_DURATION = 100, // how long the distraction is visible
 BLINK_CLICK_ASTEROID = 'yes',
-BLINK_MINERAL_DISINTEGRATE = null,
+BLINK_CLICK_MINERAL = 'yes',
+BLINK_MINERAL_DISINTEGRATE = 'no',
 
-GAME_MAX_DURATION = 120000;
+GAME_MAX_DURATION = 120000; // remember to change the instructions if you change this
 
 
 var lights = [
@@ -89,11 +92,11 @@ var blink = null;
 var serverDivs = [];
 var serverCoords = [];
 var likeCoords = null;
-var remaining = 0;
 var coveredServer = null;
 var gameStartTime = null;
-var extraAdaptation = EXTRA_ADAPTATION_FIRST_TIME;
 var lastTargetShow = null;
+var progress = null;
+var transitionDurationName = null;
 
 function init() {
 	// set up animation CSS
@@ -101,16 +104,19 @@ function init() {
 	var rule = 0;
 	if ('transition' in document.documentElement.style) {
 		ss.insertRule('.dead{transition-property:opacity;transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{transition-property:left,top,opacity;transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{transition-property:top,left,opacity;transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'transitionDuration';
 	} else if ('webkitTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-webkit-transition-property:opacity;-webkit-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;-webkit-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-webkit-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-webkit-transition-property:top,left,opacity;-webkit-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'webkitTransitionDuration';
 	} else if ('mozTransition' in document.documentElement.style) {
 		ss.insertRule('.dead{-moz-transition-property:opacity;-moz-transition-duration:' + ASTEROID_EXPLODE_TIME + 'ms;}', rule++);
-		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;-moz-transition-duration:' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_MOVE_TIME + 'ms,' + MINERAL_FADE_TIME + 'ms;}', rule++);
+		ss.insertRule('.mineral{-moz-transition-property:left,top,opacity;}', rule++);
 		ss.insertRule('.number{-moz-transition-property:top,left,opacity;-moz-transition-duration:' + SCORE_SHOW_TIME + 'ms;}', rule++);
+		transitionDurationName = 'mozTransitionDuration';
 	} else {
 		console.log('):');
 		return;
@@ -137,6 +143,14 @@ function init() {
 	setInterval(serverText, SERVER_TEXT_INTERVAL);
 	setInterval(serverStatus, SERVER_STATUS_INTERVAL);
 
+	// initialize progress
+	progress = {
+		level: 1,
+		timescale: 1,
+		nextLevel: MINERAL_SUCCESSES_PER_LEVEL,
+		nextAttack: 0
+	};
+
 	// start game
 	step();
 
@@ -147,6 +161,13 @@ function init() {
 			finish(true);
 		}
 	});
+}
+
+function setTimescale(m, s) {
+	m.style[transitionDurationName] =
+		MINERAL_MOVE_TIME * s + 'ms,' +
+		MINERAL_MOVE_TIME * s + 'ms,' +
+		MINERAL_FADE_TIME * s + 'ms';
 }
 
 function finish(liked) {
@@ -192,23 +213,34 @@ function serverStatus() {
 	else serverDivs[si].className = 'server blue';
 }
 
+function scheduleAttack() {
+	progress.nextAttack = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
+}
+
 function step() {
-	if (!extraAdaptation) remaining--;
-	if (remaining == -1) {
-		// just clicked on attack asteroid, reset everything
-		remaining = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
-	} else if (remaining > ASTEROIDS_BEFORE_SWITCH) {
-		hideTarget();
+	if (progress.level < MINERAL_TIMESCALE_LEVELS) {
+		if (!progress.nextLevel) {
+			progress.level++;
+			progress.nextLevel = MINERAL_SUCCESSES_PER_LEVEL;
+			progress.timescale *= MINERAL_TIMESCALE_PER_LEVEL;
+
+			if (progress.level == MINERAL_TIMESCALE_LEVELS) {
+				scheduleAttack();
+			}
+		}
 	}
-	if (remaining == ASTEROIDS_BEFORE_SWITCH) {
-		showTarget();
+	var action = randomAsteroid;
+	if (progress.level == MINERAL_TIMESCALE_LEVELS) {
+		if (progress.nextAttack == ASTEROIDS_BEFORE_SWITCH) {
+			showTarget();
+		} else if (progress.nextAttack == 0) {
+			action = attackAsteroid;
+		} else if (progress.nextAttack == -1) {
+			hideTarget();
+			scheduleAttack();
+		}
 	}
-	if (extraAdaptation || remaining > 0) {
-		setTimeout(randomAsteroid, ASTEROID_SPAWN_DELAY);
-	} else {
-		setTimeout(attackAsteroid, ASTEROID_SPAWN_DELAY);
-	}
-	if (extraAdaptation) extraAdaptation--;
+	setTimeout(action, ASTEROID_SPAWN_DELAY);
 }
 
 function showTarget() {
@@ -284,7 +316,7 @@ function asteroid(x, y, dx, dy) {
 		number(x, y, '+1');
 		execBlink(BLINK_CLICK_ASTEROID);
 		addScore(1);
-		step();
+		if (progress.nextAttack > -1) progress.nextAttack--;
 	});
 	playarea.appendChild(div);
 }
@@ -294,19 +326,24 @@ function mineral(x, y, dx, dy) {
 	div.className = 'mineral';
 	div.style.top = y + 'px';
 	div.style.left = x + 'px';
+	setTimescale(div, progress.timescale);
 	var tFade = setTimeout(function () {
 		div.style.opacity = '0';
-	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME);
+	}, (MINERAL_MOVE_TIME + MINERAL_HOLD_TIME) * progress.timescale);
 	var tRemove = setTimeout(function () {
 		playarea.removeChild(div);
 		execBlink(BLINK_MINERAL_DISINTEGRATE);
-	}, MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME);
+		step();
+	}, (MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME) * progress.timescale);
 	div.addEventListener('click', function (e) {
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
 		playarea.removeChild(div);
 		number(x + dx, y + dy, '+3');
 		addScore(3);
+		execBlink(BLINK_CLICK_MINERAL);
+		if (progress.nextLevel) progress.nextLevel--;
+		step();
 	});
 	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
