@@ -1,6 +1,6 @@
 <!doctype html>
 <style>
-html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;}
+html{background:black url("http://i.imgur.com/i2fMx.jpg") no-repeat;font-family:sans-serif;color:white;overflow:hidden;}
 #playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;}
 p{text-shadow:black 0 1px 3px;}
 #likelike{position:absolute;visibility:hidden;z-index:3;}
@@ -57,7 +57,8 @@ SERVER_STATUS_INTERVAL = 8000 / NUM_SERVERS,
 MIN_ADAPTATION = 3,
 MAX_ADAPTATION = 8,
 ASTEROIDS_BEFORE_SWITCH = 2, // swap to target this many asteroids before attack
-ATTACK_SPAWN_MARGIN = 100, // min distance between random asteroid spawn and target
+ATTACK_SPAWN_HOP_MAX = 120,
+ATTACK_SPAWN_HOP_MIN = 80,
 
 BLINK_DURATION = 100, // how long the distraction is visible
 BLINK_CLICK_ASTEROID = 'yes',
@@ -91,12 +92,12 @@ var scoreDisplay = null;
 var blink = null;
 var serverDivs = [];
 var serverCoords = [];
-var likeCoords = null;
 var coveredServer = null;
 var gameStartTime = null;
 var lastTargetShow = null;
 var progress = null;
 var transitionDurationName = null;
+var upcomingCoords = [];
 
 function init() {
 	// set up animation CSS
@@ -132,8 +133,8 @@ function init() {
 	for (var i = 0; i < NUM_SERVERS; i++) {
 		var c = randomCoords();
 		// servers aren't centered, so offset the coordinates
-		c.x -= 23;
-		c.y -= 12;
+		c.x -= 23 - MINERAL_DX;
+		c.y -= 12 - MINERAL_DY;
 		serverDivs.push(server(c.x, c.y));
 		serverCoords.push(c);
 	}
@@ -214,7 +215,37 @@ function serverStatus() {
 }
 
 function scheduleAttack() {
-	progress.nextAttack = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
+	var cover = Math.floor(Math.random() * NUM_SERVERS);
+	var likeCoords = serverCoords[cover];
+	coveredServer = serverDivs[cover];
+	likelike.style.top = likeCoords.y + 'px';
+	likelike.style.left = likeCoords.x + 'px';
+
+	var f = {x: likeCoords.x - MINERAL_DX, y:likeCoords.y - MINERAL_DY};
+	upcomingCoords.push({x: f.x, y: f.y});
+	var n = Math.floor(Math.random() * (MAX_ADAPTATION - MIN_ADAPTATION)) + MIN_ADAPTATION;
+	for (var i = 0; i < n; i++) {
+		var rejection = 0;
+		while (true) {
+			if (rejection++ >= 25) {
+				var rc = randomCoords();
+				f.x = rc.x - MINERAL_DX;
+				f.y = rc.y - MINERAL_DY;
+			}
+			var dx = Math.random() * ATTACK_SPAWN_HOP_MAX * 2 - ATTACK_SPAWN_HOP_MAX;
+			var dy = Math.random() * ATTACK_SPAWN_HOP_MAX * 2 - ATTACK_SPAWN_HOP_MAX;
+			var rs = dx * dx + dy * dy;
+			if (rs > ATTACK_SPAWN_HOP_MAX * ATTACK_SPAWN_HOP_MAX) continue;
+			if (rs < ATTACK_SPAWN_HOP_MIN * ATTACK_SPAWN_HOP_MIN) continue;
+			if (f.x + dx < SPAWN_LEFT || f.x + dx > SPAWN_RIGHT) continue;
+			if (f.y + dy < SPAWN_TOP || f.y + dy > SPAWN_BOTTOM) continue;
+			f.x += dx;
+			f.y += dy;
+			upcomingCoords.push({x: f.x, y: f.y});
+			break;
+		}
+	}
+	progress.nextAttack = n;
 }
 
 function step() {
@@ -244,19 +275,13 @@ function step() {
 }
 
 function showTarget() {
-	var cover = Math.floor(Math.random() * NUM_SERVERS);
-	likeCoords = serverCoords[cover];
-	coveredServer = serverDivs[cover];
 	coveredServer.className = 'covered-server';
-	likelike.style.top = likeCoords.y + 'px';
-	likelike.style.left = likeCoords.x + 'px';
 	likelike.style.visibility = 'visible';
 	lastTargetShow = Date.now();
 }
 
 function hideTarget() {
 	likelike.style.visibility = '';
-	likeCoords = null;
 	if (coveredServer) {
 		coveredServer.className = 'server green';
 		coveredServer = null;
@@ -278,17 +303,15 @@ function randomCoords() {
 }
 
 function randomAsteroid() {
-	var c = randomCoords();
-	if (likeCoords) {
-		while (sqDist(c, likeCoords) < ATTACK_SPAWN_MARGIN * ATTACK_SPAWN_MARGIN) {
-			c = randomCoords();
-		}
-	}
+	var c;
+	if (upcomingCoords.length) c = upcomingCoords.pop();
+	else c = randomCoords();
 	asteroid(c.x, c.y, MINERAL_DX, MINERAL_DY);
 }
 
 function attackAsteroid() {
-	asteroid(likeCoords.x + 23 - MINERAL_DX, likeCoords.y + 12 - MINERAL_DY, MINERAL_ATTACK_DX, MINERAL_ATTACK_DY);
+	var c = upcomingCoords.pop();
+	asteroid(c.x + 23, c.y + 12, MINERAL_ATTACK_DX, MINERAL_ATTACK_DY);
 }
 
 function execBlink(type) {
