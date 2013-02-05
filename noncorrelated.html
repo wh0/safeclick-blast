@@ -4,9 +4,10 @@ html{min-height:100%;line-height:16px;font-size:13px;font-family:sans-serif;colo
 #playarea{position:absolute;top:0;left:0;bottom:0;right:0;margin:auto;width:640px;height:480px;cursor:none;}
 #decoy{position:absolute;top:232px;right:424px;margin:0;text-align:right;z-index:2;}
 #decoy a{cursor:inherit;}
-#likelike{position:absolute;top:228px;left:297px;z-index:2;}
-#pointer{position:fixed;visibility:hidden;pointer-events:none;z-index:3;}
+#likelike{position:absolute;top:228px;left:297px;z-index:3;}
+#pointer{position:fixed;visibility:hidden;pointer-events:none;z-index:4;}
 .random{position:absolute;pointer-events:none;z-index:1;}
+#paths{position:absolute;top:0;left:0;z-index:2;opacity:0;}
 </style>
 <style>/* this one is populated by javascript */</style>
 <script>
@@ -27,6 +28,8 @@ LASTMILE_VI = 4; // amplify current velocity in bezier extrapolation
 var playarea = null;
 var likelike = null;
 var pointer = null;
+var paths = null;
+var pathctx = null;
 var distractInterval = null;
 var traceEvents = false;
 var ox, oy;
@@ -51,6 +54,10 @@ function init() {
 	playarea = document.getElementById('playarea');
 	likelike = document.getElementById('likelike');
 	pointer = document.getElementById('pointer');
+	paths = document.getElementById('paths');
+	pathctx = paths.getContext('2d');
+	pathctx.fillStyle = '#f0f0f0';
+	pathctx.fillRect(0, 0, paths.width, paths.hegiht);
 
 	playarea.addEventListener('mousemove', move);
 	playarea.addEventListener('mouseover', over);
@@ -68,6 +75,48 @@ function init() {
 	});
 }
 
+var pathVis = {
+	init: false,
+	rx: 0,
+	ry: 0,
+	fx: 0,
+	fy: 0,
+	alt: true,
+	dx: 0,
+	dy: 0,
+	move: function (rx, ry, fx, fy) {
+		rx -= this.dx;
+		ry -= this.dy;
+		fx -= this.dx;
+		fy -= this.dy;
+		if (this.init) {
+			pathctx.beginPath();
+			pathctx.moveTo(this.rx, this.ry);
+			pathctx.lineTo(rx, ry);
+			if (this.alt) {
+				pathctx.moveTo(this.fx, this.fy);
+				pathctx.lineTo(fx, fy);
+			}
+			pathctx.stroke();
+		} else {
+			pathctx.fillRect(0, 0, paths.width, paths.height);
+		}
+		this.rx = rx;
+		this.ry = ry;
+		this.fx = fx;
+		this.fy = fy;
+		this.init = true;
+		this.alt = !this.alt;
+	},
+	out: function () {
+		this.init = false;
+	},
+	resize: function () {
+		this.dx = playarea.offsetLeft;
+		this.dy = playarea.offsetTop;
+	}
+};
+
 function finish(liked) {
 	var o = {type: 'crooked', liked: liked};
 	var h = '#' + JSON.stringify(o);
@@ -77,7 +126,7 @@ function finish(liked) {
 function over(e) {
 	if (traceEvents) console.log('over', e.target, e.relatedTarget);
 	if (e.target == likelike) animateLastMile();
-	if (e.target != playarea) return;
+	if (e.target != paths) return;
 	if (e.relatedTarget != null &&
 	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
 	pointer.style.visibility = 'visible';
@@ -85,10 +134,11 @@ function over(e) {
 
 function out(e) {
 	if (traceEvents) console.log('out', e.target, e.relatedTarget);
-	if (e.target != playarea) return;
+	if (e.target != paths) return;
 	if (e.relatedTarget != null &&
 	    (playarea.compareDocumentPosition(e.relatedTarget) & playarea.DOCUMENT_POSITION_CONTAINED_BY)) return;
 	pointer.style.visibility = '';
+	pathVis.out();
 	if (distractInterval) {
 		clearInterval(distractInterval);
 		distractInterval = null;
@@ -112,6 +162,7 @@ function move(e) {
 	if (!lastMileAnimating) {
 		pointer.style.top = cy + ay + 'px';
 		pointer.style.left = cx + ax + 'px';
+		pathVis.move(cx, cy, cx + ax, cy + ay);
 	}
 
 	// update saved velocity and position
@@ -129,21 +180,22 @@ function move(e) {
 function resize(e) {
 	ox = playarea.offsetLeft + playarea.offsetWidth / 2;
 	oy = playarea.offsetTop + playarea.offsetHeight / 2;
+	pathVis.resize();
 }
 
 function down(e) {
 	if (e.shiftKey) {
 		traceEvents = true;
-		playarea.style.backgroundColor = '#f0f0f0';
 		playarea.style.cursor = 'crosshair';
+		paths.style.opacity = '1';
 	}
 }
 
 function up(e) {
 	if (!e.shiftKey) {
 		traceEvents = false;
-		playarea.style.backgroundColor = '';
 		playarea.style.cursor = '';
+		paths.style.opacity = '';
 	}
 }
 
@@ -195,6 +247,7 @@ function animateLastMile() {
 </script>
 <body>
 <div id="playarea">
+	<canvas id="paths" width="640" height="480"></canvas>
 	<p id="decoy">feel free to click <a href="/" onclick="finish(); return false">here</a></p>
 	<iframe id="likelike"    src="http://bl.ocks.org/d/ea274ec62f0c248144e5/"   scrolling="no" frameborder="0" style="border:none; overflow:hidden;   width:450px; height:35px;" allowTransparency="true"></iframe>
 	<img id="pointer" src="http://i.imgur.com/EWmYMN2.png">
