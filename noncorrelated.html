@@ -47,7 +47,7 @@ function init() {
 	} else if ('mozTransition' in document.documentElement.style) {
 		ss.insertRule('.random{-moz-transition-duration:' + RANDOM_MOVE_TIME + 'ms;}', rule++);
 	} else {
-		console.log('):');
+		location.replace('browser.html');
 		return;
 	}
 

@@ -1,6 +1,15 @@
 <!doctype html>
 <link rel="stylesheet" href="porcelain.css">
 <title>Instructions</title>
+<script>
+// Test for CORS. Our logging system is hosted off-site.
+try {
+	var x = new XMLHttpRequest();
+	x.open('POST', 'http://www.example.com/');
+} catch (e) {
+	location.replace('browser.html');
+}
+</script>
 <div id="middle">
 <p><img src="http://i.imgur.com/3qsq2MZ.png"> </p>
 <p>In this game, you defend a space datacenter from asteroids.</p>

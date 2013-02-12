@@ -80,6 +80,7 @@ function getTransitionPrefix() {
 	if ('transition' in s) return '';
 	if ('webkitTransition' in s) return '-webkit-';
 	if ('mozTransition' in s) return '-moz-';
+	location.replace('browser.html');
 	throw '): transitions';
 }
 

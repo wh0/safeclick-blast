@@ -2,6 +2,15 @@
 <html style="min-height:100%;">
 <link rel="stylesheet" href="porcelain.css">
 <title>Instructions</title>
+<script>
+// Test for CORS. Our logging system is hosted off-site.
+try {
+	var x = new XMLHttpRequest();
+	x.open('POST', 'http://www.example.com/');
+} catch (e) {
+	location.replace('browser.html');
+}
+</script>
 <body style="min-height:100%;">
 <div id="middle" style="margin:32px;bottom:0;right:auto;">
 <p><img src="http://i.imgur.com/Vjg4p5s.png"> </p>
