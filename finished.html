@@ -44,7 +44,7 @@ function generatePassword(h) {
 	pd.textContent = 'generating password...';
 	var body = 'message=' + encodeURIComponent(h);
 	var x = new XMLHttpRequest();
-	x.open('POST', 'http://inst.eecs.berkeley.edu/~warrenhe/log/');
+	x.open('POST', 'http://httpbin.org/status/400'); // set logging service URL here
 	x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	x.addEventListener('load', function (e) {
 		if (x.status == 200) {
