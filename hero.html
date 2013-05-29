@@ -13,7 +13,7 @@ html{background-color:#000000;}
 .right{left:57px;background-image:url("http://i.imgur.com/gKfWg.png");}
 #playposition{position:absolute;bottom:0;left:0;right:0;height:60px;background-color:#606060}
 #likelike,#fake{position:absolute;left:10px;top:10px;}
-#likelike{visibility:hidden;z-index:8;}
+#likelike{margin-left:-1000px;z-index:8;}
 #fake{font:11px "Lucida Grande","Tahoma","Verdana","Arial",sans-serif;}
 #fake img{vertical-align:middle;}
 #fake .button{display:inline-block;vertical-align:middle;border-radius:3px;border:1px solid #eeac9d;padding:3px 3px 4px 6px;background-color:#f5f3ed;color:#98593b;cursor:pointer;}
@@ -103,9 +103,20 @@ function init() {
 		if (indicator) indicator.style.visibility = 'visible';
 		if (receiver) receiver(e);
 	});
+	sensor.addEventListener('touchstart', function (e) {
+		e.preventDefault();
+		var indicator = document.getElementById('indicator_0');
+		if (indicator) indicator.style.visibility = 'visible';
+		if (receiver) receiver({button: 0});
+	});
 	sensor.addEventListener('mouseup', function (e) {
 		e.preventDefault();
 		var indicator = document.getElementById('indicator_' + e.button);
+		if (indicator) indicator.style.visibility = '';
+	});
+	sensor.addEventListener('touchend', function (e) {
+		e.preventDefault();
+		var indicator = document.getElementById('indicator_0');
 		if (indicator) indicator.style.visibility = '';
 	});
 	sensor.addEventListener('contextmenu', function (e) {
@@ -168,12 +179,12 @@ function start() {
 		}, TARGET_DELAY);
 		if (isAttack) {
 			setTimeout(function () {
-				likelike.style.visibility = 'visible';
+				likelike.style.marginLeft = '0px';
 				fake.style.visibility = 'hidden';
 				lastTargetShow = Date.now();
 			}, TARGET_DELAY - ATTACK_STABILITY);
 			setTimeout(function () {
-				likelike.style.visibility = '';
+				likelike.style.marginLeft = '';
 				fake.style.visibility = '';
 				lastTargetShow = null;
 			}, TARGET_DELAY + ATTACK_LINGER);
