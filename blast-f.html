@@ -332,7 +332,10 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 		div.style.opacity = '0';
 		div.style.backgroundImage = 'url("http://i.imgur.com/CL6kNZq.png")';
 
-		div.addEventListener('mousedown', function (e) {
+		var done = false;
+		var handler = function (e) {
+			if (done) return;
+			done = true;
 			clearTimeout(tFade);
 			clearTimeout(tRemove);
 			playarea.removeChild(div);
@@ -344,7 +347,9 @@ function mineral(x, y, dx, dy, displacementDuration, fadeDuration) {
 			setTimeout(function () {
 				test('hit');
 			}, ASTEROID_SPAWN_DELAY);
-		});
+		};
+		div.addEventListener('mousedown', handler);
+		div.addEventListener('touchstart', handler);
 	}, displacementDuration);
 	var tRemove = setTimeout(function () {
 		playarea.removeChild(div);

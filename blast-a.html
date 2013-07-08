@@ -125,6 +125,9 @@ function init() {
 
 	// get main elements
 	playarea = document.getElementById('playarea');
+	playarea.addEventListener('touchstart', function (e) {
+		e.preventDefault();
+	});
 	likelike = document.getElementById('likelike');
 	blink = document.getElementById('blink');
 	scoreDisplay = document.getElementById('scoreDisplay');
@@ -328,7 +331,7 @@ function asteroid(x, y, dx, dy) {
 	div.className = 'asteroid';
 	div.style.top = y + 'px';
 	div.style.left = x + 'px';
-	div.addEventListener('click', function (e) {
+	var handler = function (e) {
 		if (div.className == 'dead') return;
 		div.className = 'dead';
 		div.style.opacity = '0';
@@ -340,7 +343,9 @@ function asteroid(x, y, dx, dy) {
 		execBlink(BLINK_CLICK_ASTEROID);
 		addScore(1);
 		if (progress.nextAttack > -1) progress.nextAttack--;
-	});
+	};
+	div.addEventListener('click', handler);
+	div.addEventListener('touchstart', handler);
 	playarea.appendChild(div);
 }
 
@@ -358,7 +363,10 @@ function mineral(x, y, dx, dy) {
 		execBlink(BLINK_MINERAL_DISINTEGRATE);
 		step();
 	}, (MINERAL_MOVE_TIME + MINERAL_HOLD_TIME + MINERAL_FADE_TIME) * progress.timescale);
-	div.addEventListener('click', function (e) {
+	var done = false;
+	var handler = function (e) {
+		if (done) return;
+		done = true;
 		clearTimeout(tFade);
 		clearTimeout(tRemove);
 		playarea.removeChild(div);
@@ -367,7 +375,9 @@ function mineral(x, y, dx, dy) {
 		execBlink(BLINK_CLICK_MINERAL);
 		if (progress.nextLevel) progress.nextLevel--;
 		step();
-	});
+	};
+	div.addEventListener('click', handler);
+	div.addEventListener('touchstart', handler);
 	playarea.appendChild(div);
 	var dummy = div.clientHeight; // flush initialization
 	div.style.top = y + dy + 'px';
